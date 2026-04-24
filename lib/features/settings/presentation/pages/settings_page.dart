@@ -121,6 +121,18 @@ class SettingsPage extends ConsumerWidget {
                   },
                 ),
               ),
+              const SizedBox(height: AppSpacing.md),
+              Card(
+              child: ListTile(
+                leading: const Icon(Icons.bug_report_outlined),
+                title: const Text('Reminder Debug'),
+                subtitle: const Text('See last scheduled reminder'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  context.push('/settings/reminder-debug');
+                },
+              ),
+            ),
           const SizedBox(height: AppSpacing.md),
           _SettingsInfoCard(
             icon: Icons.language_outlined,

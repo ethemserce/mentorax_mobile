@@ -3,6 +3,7 @@ import 'package:mentorax/features/materials/data/models/material_model.dart';
 import 'package:mentorax/features/materials/presentation/pages/material_detail_page.dart';
 import 'package:mentorax/features/progress/presentation/pages/progress_page.dart';
 import 'package:mentorax/features/settings/presentation/pages/notification_test_page.dart';
+import 'package:mentorax/features/settings/presentation/pages/reminder_debug_page.dart';
 import 'package:mentorax/features/study_plans/presentation/pages/plan_detail_page.dart';
 import 'package:mentorax/features/study_plans/presentation/pages/plan_list_page.dart';
 import 'package:mentorax/features/study_sessions/presentation/pages/session_running_page.dart';
@@ -122,10 +123,18 @@ GoRoute(
     return PlanDetailPage(planId: planId);
   },
 ),
-      GoRoute(
+     GoRoute(
   path: '/plans',
   name: 'plans',
-  builder: (context, state) => const PlanListPage(),
+  builder: (context, state) {
+    final materialId = state.extra as String?;
+    return PlanListPage(materialId: materialId);
+  },
+),
+GoRoute(
+  path: '/settings/reminder-debug',
+  name: 'reminder-debug',
+  builder: (context, state) => const ReminderDebugPage(),
 ),
      GoRoute(
   path: '/session-complete',

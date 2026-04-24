@@ -32,12 +32,12 @@ class StudyPlanSessionModel {
       id: json['id'] as String,
       studyPlanId: json['studyPlanId'] as String,
       sequenceNumber: json['sequenceNumber'] as int,
-      scheduledAtUtc: DateTime.parse(json['scheduledAtUtc'] as String),
+     scheduledAtUtc: parseUtcDateTime(json['scheduledAtUtc'] as String),
       plannedDurationMinutes: json['plannedDurationMinutes'] as int,
       status: json['status'] as String,
-      completedAtUtc: json['completedAtUtc'] != null
-          ? DateTime.parse(json['completedAtUtc'] as String)
-          : null,
+completedAtUtc: json['completedAtUtc'] != null
+    ? parseUtcDateTime(json['completedAtUtc'] as String)
+    : null,
       actualDurationMinutes: json['actualDurationMinutes'] as int?,
       notes: json['notes'] as String?,
       easinessFactor: (json['easinessFactor'] as num?)?.toDouble(),
@@ -45,4 +45,9 @@ class StudyPlanSessionModel {
       repetitionCount: json['repetitionCount'] as int?,
     );
   }
+}
+
+DateTime parseUtcDateTime(String value) {
+  final normalized = value.endsWith('Z') ? value : '${value}Z';
+  return DateTime.parse(normalized);
 }

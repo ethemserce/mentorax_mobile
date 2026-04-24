@@ -169,7 +169,7 @@ Card(
           const SizedBox(height: AppSpacing.xl),
 OutlinedButton.icon(
   onPressed: () {
-    context.push('/plans');
+    context.push('/plans', extra: material.id);
   },
   icon: const Icon(Icons.list_alt_outlined),
   label: const Text('View Plans'),

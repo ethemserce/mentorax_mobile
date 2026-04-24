@@ -25,10 +25,10 @@ class NextSessionModel {
       studyPlanId: json['studyPlanId'] as String,
       materialId: json['materialId'] as String,
       materialTitle: json['materialTitle'] as String,
-      scheduledAtUtc: DateTime.parse(json['scheduledAtUtc'] as String),
-      startedAtUtc: json['startedAtUtc'] != null
-          ? DateTime.parse(json['startedAtUtc'] as String)
-          : null,
+scheduledAtUtc: DateTime.parse('${json['scheduledAtUtc']}Z'),
+startedAtUtc: json['startedAtUtc'] != null
+    ? DateTime.parse('${json['startedAtUtc']}Z')
+    : null,
       estimatedMinutes: json['estimatedMinutes'] as int,
       isDue: json['isDue'] as bool,
     );

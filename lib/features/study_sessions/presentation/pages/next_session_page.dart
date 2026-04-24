@@ -17,9 +17,15 @@ class NextSessionPage extends ConsumerWidget {
     final nextSessionAsync = ref.watch(nextSessionProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Next Session'),
-      ),
+  appBar: AppBar(
+    title: const Text('Next Session'),
+    leading: IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () {
+        context.go('/dashboard');
+      },
+    ),
+  ),
       body: nextSessionAsync.when(
         data: (session) => _NextSessionView(session: session),
         loading: () => const Center(child: CircularProgressIndicator()),

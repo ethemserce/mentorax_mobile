@@ -33,9 +33,15 @@ class SessionRunningPage extends ConsumerWidget {
           );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Session Running'),
-      ),
+appBar: AppBar(
+  title: const Text('Session Running'),
+  leading: IconButton(
+    icon: const Icon(Icons.arrow_back),
+    onPressed: () {
+      context.go('/dashboard');
+    },
+  ),
+),
       body: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mentorax/core/notifications/reminder_debug_provider.dart';
+import 'package:mentorax/core/notifications/reminder_debug_state.dart';
 import 'package:mentorax/core/notifications/study_reminder_service.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
@@ -26,6 +28,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
   final _dailyTargetController = TextEditingController(text: '30');
 
   int _preferredHour = DateTime.now().hour;
+  int _preferredMinute = DateTime.now().minute;
   bool _isLoading = false;
   String? _generalError;
 
@@ -54,6 +57,20 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
       return;
     }
 
+      if (_preferredHour < 0 || _preferredHour > 23) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Preferred hour must be between 0 and 23')),
+        );
+        return;
+      }
+
+    if (_preferredMinute < 0 || _preferredMinute > 59) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preferred minute must be between 0 and 59')),
+      );
+      return;
+}
+
     setState(() {
       _isLoading = true;
       _generalError = null;
@@ -66,12 +83,34 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
         startDate: _toDateOnlyString(DateTime.now()),
         dailyTargetMinutes: dailyTarget,
         preferredHour: _preferredHour,
+        preferredMinute: _preferredMinute,
         dayOffsets: const [0],
       );
 
       final createdPlan = await ref.read(studyPlanServiceProvider).createPlan(request);
       final detail = await ref.read(studyPlanServiceProvider).getPlanById(createdPlan.id);
-      await StudyReminderService.instance.rescheduleFromPlanDetail(detail);
+await StudyReminderService.instance.rescheduleFromPlanDetail(
+  detail,
+  onDebug: ({
+    required action,
+    sessionId,
+    planId,
+    sessionTime,
+    reminderTime,
+    message,
+  }) {
+    ref.read(reminderDebugProvider.notifier).update(
+          ReminderDebugState(
+            lastAction: action,
+            sessionId: sessionId,
+            planId: planId,
+            sessionTime: sessionTime,
+            reminderTime: reminderTime,
+            message: message,
+          ),
+        );
+  },
+);
 
       if (!mounted) return;
 
@@ -150,13 +189,34 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
               24,
               (index) => DropdownMenuItem(
                 value: index,
-                child: Text('${index.toString().padLeft(2, '0')}:00'),
+                child: Text('${index.toString().padLeft(2, '0')} '),
               ),
             ),
             onChanged: (value) {
               if (value != null) {
                 setState(() {
                   _preferredHour = value;
+                });
+              }
+            },
+          ),
+           const SizedBox(height: AppSpacing.md),
+          DropdownButtonFormField<int>(
+            initialValue: _preferredMinute,
+            decoration: const InputDecoration(
+              labelText: 'Preferred Minute',
+            ),
+            items: List.generate(
+              60,
+              (index) => DropdownMenuItem(
+                value: index,
+                child: Text('${index.toString().padLeft(2, '0')} '),
+              ),
+            ),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _preferredMinute = value;
                 });
               }
             },

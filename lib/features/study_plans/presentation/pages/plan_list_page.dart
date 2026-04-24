@@ -7,7 +7,9 @@ import '../providers/study_plan_providers.dart';
 import 'package:go_router/go_router.dart';
 
 class PlanListPage extends ConsumerWidget {
-  const PlanListPage({super.key});
+  final String? materialId;
+
+  const PlanListPage({super.key,this.materialId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,9 +21,13 @@ class PlanListPage extends ConsumerWidget {
       ),
       body: plansAsync.when(
         data: (plans) {
-          if (plans.isEmpty) {
-            return const _EmptyPlansState();
-          }
+      final filteredPlans = materialId == null
+    ? plans
+    : plans.where((x) => x.learningMaterialId == materialId).toList();
+
+if (filteredPlans.isEmpty) {
+  return const _EmptyPlansState();
+}
 
           return RefreshIndicator(
             onRefresh: () async {
@@ -30,10 +36,10 @@ class PlanListPage extends ConsumerWidget {
             },
             child: ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.lg),
-              itemCount: plans.length,
+              itemCount: filteredPlans.length,
               separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
               itemBuilder: (context, index) {
-                final plan = plans[index];
+                final plan = filteredPlans[index];
           return _PlanCard(
   plan: plan,
   onTap: () {

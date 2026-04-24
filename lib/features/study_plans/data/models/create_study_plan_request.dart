@@ -4,6 +4,7 @@ class CreateStudyPlanRequest {
   final String startDate;
   final int dailyTargetMinutes;
   final int preferredHour;
+  final int preferredMinute;
   final List<int>? dayOffsets;
 
   CreateStudyPlanRequest({
@@ -12,6 +13,7 @@ class CreateStudyPlanRequest {
     required this.startDate,
     required this.dailyTargetMinutes,
     required this.preferredHour,
+    required this.preferredMinute,
     this.dayOffsets,
   });
 
