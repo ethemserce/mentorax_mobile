@@ -15,11 +15,13 @@ import '../../../../core/state/app_refresh_controller.dart';
 class CompleteSessionPage extends ConsumerStatefulWidget {
   final NextSessionModel session;
   final int? elapsedSeconds;
+  final String? initialNotes;
 
   const CompleteSessionPage({
     super.key,
     required this.session,
     this.elapsedSeconds,
+      this.initialNotes,
   });
 
   @override
@@ -29,7 +31,7 @@ class CompleteSessionPage extends ConsumerStatefulWidget {
 
 class _CompleteSessionPageState extends ConsumerState<CompleteSessionPage> {
   final _durationController = TextEditingController();
-  final _notesController = TextEditingController();
+  late final TextEditingController _notesController;
 
   double _qualityScore = 4;
   double _difficultyScore = 3;
@@ -38,7 +40,9 @@ class _CompleteSessionPageState extends ConsumerState<CompleteSessionPage> {
 @override
 void initState() {
   super.initState();
-
+  _notesController = TextEditingController(
+    text: widget.initialNotes ?? '',
+  );
   if (widget.elapsedSeconds != null && widget.elapsedSeconds! > 0) {
     final minutes = (widget.elapsedSeconds! / 60).ceil();
     _durationController.text = minutes.toString();

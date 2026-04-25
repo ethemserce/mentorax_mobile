@@ -1,3 +1,5 @@
+import 'package:mentorax/features/study_plans/data/models/study_plan_item_model.dart';
+
 import 'study_plan_session_model.dart';
 
 class StudyPlanModel {
@@ -9,6 +11,7 @@ class StudyPlanModel {
   final int dailyTargetMinutes;
   final String status;
   final List<StudyPlanSessionModel> sessions;
+  final List<StudyPlanItemModel> items;
 
   StudyPlanModel({
     required this.id,
@@ -19,6 +22,7 @@ class StudyPlanModel {
     required this.dailyTargetMinutes,
     required this.status,
     required this.sessions,
+    required this.items,
   });
 
   int get totalSessions => sessions.length;
@@ -52,9 +56,12 @@ class StudyPlanModel {
       startDate: json['startDate'] as String,
       dailyTargetMinutes: json['dailyTargetMinutes'] as int,
       status: json['status'] as String,
-      sessions: (json['sessions'] as List<dynamic>)
-          .map((e) => StudyPlanSessionModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
+sessions: ((json['sessions'] as List?) ?? [])
+    .map((e) => StudyPlanSessionModel.fromJson(e as Map<String, dynamic>))
+    .toList(),
+items: ((json['items'] as List?) ?? [])
+    .map((x) => StudyPlanItemModel.fromJson(x as Map<String, dynamic>))
+    .toList(),
     );
   }
 }

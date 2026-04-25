@@ -73,7 +73,7 @@ await StudyReminderService.instance.cancelForSession(started.sessionId);
       );
 
       if (!mounted) return;
-      context.push('/session-running', extra: started);
+      context.push('/study-room', extra: started.sessionId);
     } catch (e) {
       if (!mounted) return;
 

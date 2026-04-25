@@ -8,6 +8,7 @@ import 'package:mentorax/features/study_plans/presentation/pages/plan_detail_pag
 import 'package:mentorax/features/study_plans/presentation/pages/plan_list_page.dart';
 import 'package:mentorax/features/study_sessions/presentation/pages/session_running_page.dart';
 import 'package:mentorax/features/study_sessions/presentation/pages/session_success_page.dart';
+import 'package:mentorax/features/study_sessions/presentation/pages/study_room_page.dart';
 import '../../app/root_shell_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
@@ -136,22 +137,44 @@ GoRoute(
   name: 'reminder-debug',
   builder: (context, state) => const ReminderDebugPage(),
 ),
-     GoRoute(
+GoRoute(
   path: '/session-complete',
   name: 'session-complete',
   builder: (context, state) {
-    if (state.extra is Map<String, dynamic>) {
-      final data = state.extra as Map<String, dynamic>;
-      final session = data['session'] as NextSessionModel;
-      final elapsedSeconds = data['elapsedSeconds'] as int?;
+    final extra = state.extra;
+
+    if (extra is NextSessionModel) {
+      return CompleteSessionPage(session: extra);
+    }
+
+    if (extra is Map<String, dynamic>) {
       return CompleteSessionPage(
-        session: session,
-        elapsedSeconds: elapsedSeconds,
+        session: extra['session'] as NextSessionModel,
+        initialNotes: extra['notes'] as String?,
+        elapsedSeconds: extra['elapsedSeconds'] as int?,
       );
     }
 
-    final session = state.extra as NextSessionModel;
-    return CompleteSessionPage(session: session);
+    throw Exception('CompleteSessionPage requires NextSessionModel');
+  },
+),
+GoRoute(
+  path: '/study-room',
+  name: 'study-room',
+  builder: (context, state) {
+    final extra = state.extra;
+
+    late final String sessionId;
+
+    if (extra is String) {
+      sessionId = extra;
+    } else if (extra is NextSessionModel) {
+      sessionId = extra.sessionId;
+    } else {
+      throw Exception('StudyRoom requires a sessionId');
+    }
+
+    return StudyRoomPage(sessionId: sessionId);
   },
 ),
     ],

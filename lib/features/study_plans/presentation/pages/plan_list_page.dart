@@ -21,7 +21,7 @@ class PlanListPage extends ConsumerWidget {
       ),
       body: plansAsync.when(
         data: (plans) {
-      final filteredPlans = materialId == null
+      final filteredPlans = materialId == null || materialId!.isEmpty
     ? plans
     : plans.where((x) => x.learningMaterialId == materialId).toList();
 
