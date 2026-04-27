@@ -81,6 +81,7 @@ class SessionSuccessPage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
+                // ignore: deprecated_member_use
                 color: AppColors.primary.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(20),
               ),

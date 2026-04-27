@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mentorax/features/study_plans/data/models/study_plan_item_model.dart';
+
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../providers/study_plan_providers.dart';
@@ -27,349 +28,126 @@ class PlanDetailPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final planAsync = ref.watch(studyPlanDetailProvider(planId));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Plan Detail'),
-      ),
-      body: planAsync.when(
-        data: (plan) {
-          final status = plan.status.toLowerCase();
-          final isActive = status == 'active';
-          final isPaused = status == 'paused';
-          final isCancelled = status == 'cancelled';
-          final isCompleted = status == 'completed';
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Plan Detail'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Overview'),
+              Tab(text: 'Sessions'),
+              Tab(text: 'Items'),
+            ],
+          ),
+        ),
+        body: planAsync.when(
+          data: (plan) {
+            final status = plan.status.toLowerCase();
+            final isActive = status == 'active';
+            final isPaused = status == 'paused';
+            final isCancelled = status == 'cancelled';
+            final isCompleted = status == 'completed';
 
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(studyPlanDetailProvider(planId));
-              await ref.read(studyPlanDetailProvider(planId).future);
-            },
-            child: ListView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+            return TabBarView(
               children: [
-                Card(
-                  child: Padding(
+                RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(studyPlanDetailProvider(planId));
+                    await ref.read(studyPlanDetailProvider(planId).future);
+                  },
+                  child: ListView(
                     padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          plan.title,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          'Status: ${plan.status}',
-                          style: TextStyle(
-                            color: isActive
-                                ? AppColors.success
-                                : isCancelled
-                                    ? AppColors.warning
-                                    : AppColors.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          'Start Date: ${plan.startDate}',
-                          style: const TextStyle(color: AppColors.textSecondary),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          'Daily Target: ${plan.dailyTargetMinutes} min',
-                          style: const TextStyle(color: AppColors.textSecondary),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _DetailMiniStat(
-                                label: 'Total',
-                                value: '${plan.totalSessions}',
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: _DetailMiniStat(
-                                label: 'Completed',
-                                value: '${plan.completedSessions}',
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: _DetailMiniStat(
-                                label: 'Remaining',
-                                value: '${plan.remainingSessions}',
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: LinearProgressIndicator(
-                            value: plan.progress,
-                            minHeight: 10,
-                            backgroundColor: AppColors.border,
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                              AppColors.primary,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        if (isActive || isPaused) ...[
-                          Row(
-                            children: [
-                              if (isActive)
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () async {
-                                      await ref
-                                          .read(studyPlanServiceProvider)
-                                          .pausePlan(plan.id);
-
-                                      ref.invalidate(
-                                        studyPlanDetailProvider(plan.id),
-                                      );
-                                      ref.invalidate(studyPlansProvider);
-                                    },
-                                    child: const Text('Pause'),
-                                  ),
-                                ),
-                              if (isPaused)
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () async {
-                                      await ref
-                                          .read(studyPlanServiceProvider)
-                                          .resumePlan(plan.id);
-
-                                      ref.invalidate(
-                                        studyPlanDetailProvider(plan.id),
-                                      );
-                                      ref.invalidate(studyPlansProvider);
-                                    },
-                                    child: const Text('Resume'),
-                                  ),
-                                ),
-                              const SizedBox(width: AppSpacing.md),
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: () async {
-                                    await ref
-                                        .read(studyPlanServiceProvider)
-                                        .cancelPlan(plan.id);
-
-                                    ref.invalidate(
-                                      studyPlanDetailProvider(plan.id),
-                                    );
-                                    ref.invalidate(studyPlansProvider);
-                                  },
-                                  child: const Text('Cancel'),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ] else if (isCancelled) ...[
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(AppSpacing.md),
-                            decoration: BoxDecoration(
-                              color: AppColors.warning.withOpacity(0.10),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: const Text(
-                              'This plan has been cancelled.',
-                              style: TextStyle(
-                                color: AppColors.warning,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ] else if (isCompleted) ...[
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(AppSpacing.md),
-                            decoration: BoxDecoration(
-                              color: AppColors.success.withOpacity(0.10),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: const Text(
-                              'This plan has been completed.',
-                              style: TextStyle(
-                                color: AppColors.success,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                const Text(
-                  'Sessions',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                ...plan.sessions.map(
-                  (session) => Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.md,
-                                    vertical: AppSpacing.sm,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: session.isCompleted
-                                        ? AppColors.success.withOpacity(0.10)
-                                        : AppColors.warning.withOpacity(0.10),
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                  child: Text(
-                                    'Session ${session.sequenceNumber}',
-                                    style: TextStyle(
-                                      color: session.isCompleted
-                                          ? AppColors.success
-                                          : AppColors.warning,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  session.isCompleted ? 'Completed' : 'Pending',
-                                  style: TextStyle(
-                                    color: session.isCompleted
-                                        ? AppColors.success
-                                        : AppColors.textSecondary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                            Text(
-                              'Scheduled: ${_formatDateTime(session.scheduledAtUtc)}',
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                              'Planned Duration: ${session.plannedDurationMinutes} min',
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            if (session.completedAtUtc != null) ...[
-                              const SizedBox(height: AppSpacing.xs),
-                              Text(
-                                'Completed At: ${_formatDateTime(session.completedAtUtc!)}',
-                                style: const TextStyle(
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                            if (session.actualDurationMinutes != null) ...[
-                              const SizedBox(height: AppSpacing.xs),
-                              Text(
-                                'Actual Duration: ${session.actualDurationMinutes} min',
-                                style: const TextStyle(
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                            if (session.intervalDays != null ||
-                                session.repetitionCount != null ||
-                                session.easinessFactor != null) ...[
-                              const SizedBox(height: AppSpacing.md),
-                              Wrap(
-                                spacing: AppSpacing.sm,
-                                runSpacing: AppSpacing.sm,
-                                children: [
-                                  if (session.intervalDays != null)
-                                    _MetaChip(
-                                      label:
-                                          'Interval: ${session.intervalDays} day',
-                                    ),
-                                  if (session.repetitionCount != null)
-                                    _MetaChip(
-                                      label:
-                                          'Repeat: ${session.repetitionCount}',
-                                    ),
-                                  if (session.easinessFactor != null)
-                                    _MetaChip(
-                                      label:
-                                          'EF: ${session.easinessFactor!.toStringAsFixed(2)}',
-                                    ),
-                                ],
-                              ),
-                            ],
-                            if (session.notes != null &&
-                                session.notes!.trim().isNotEmpty) ...[
-                              const SizedBox(height: AppSpacing.md),
-                              Text(
-                                session.notes!,
-                                style: const TextStyle(
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
+                    children: [
+                      _OverviewCard(
+                        title: plan.title,
+                        status: plan.status,
+                        startDate: plan.startDate,
+                        dailyTargetMinutes: plan.dailyTargetMinutes,
+                        totalSessions: plan.totalSessions,
+                        completedSessions: plan.completedSessions,
+                        remainingSessions: plan.remainingSessions,
+                        progress: plan.progress,
+                        isActive: isActive,
+                        isCancelled: isCancelled,
+                        isCompleted: isCompleted,
+                        isPaused: isPaused,
+                        onPause: () async {
+                          await ref.read(studyPlanServiceProvider).pausePlan(plan.id);
+                          ref.invalidate(studyPlanDetailProvider(plan.id));
+                          ref.invalidate(studyPlansProvider);
+                        },
+                        onResume: () async {
+                          await ref.read(studyPlanServiceProvider).resumePlan(plan.id);
+                          ref.invalidate(studyPlanDetailProvider(plan.id));
+                          ref.invalidate(studyPlansProvider);
+                        },
+                        onCancel: () async {
+                          await ref.read(studyPlanServiceProvider).cancelPlan(plan.id);
+                          ref.invalidate(studyPlanDetailProvider(plan.id));
+                          ref.invalidate(studyPlansProvider);
+                        },
                       ),
-                    ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.lg),
-                Text(
-                  'Study Items',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                if (plan.items.isEmpty)
-                  const Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(AppSpacing.lg),
-                      child: Text('No study items found.'),
-                    ),
-                  )
-                else
-                  ...plan.items.map(
-                    (item) => _StudyPlanItemCard(item: item),
+                RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(studyPlanDetailProvider(planId));
+                    await ref.read(studyPlanDetailProvider(planId).future);
+                  },
+                  child: ListView(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    children: [
+                      if (plan.sessions.isEmpty)
+                        const _EmptyState(message: 'No sessions found.')
+                      else
+                        ...plan.sessions.map(
+                          (session) => _SessionCard(
+                            title: 'Session ${session.sequenceNumber}',
+                            status: session.isCompleted ? 'Completed' : 'Pending',
+                            scheduledAt: _formatDateTime(session.scheduledAtUtc),
+                            plannedDurationMinutes:
+                                session.plannedDurationMinutes,
+                            completedAt: session.completedAtUtc == null
+                                ? null
+                                : _formatDateTime(session.completedAtUtc!),
+                            actualDurationMinutes:
+                                session.actualDurationMinutes,
+                            notes: session.notes,
+                          ),
+                        ),
+                    ],
                   ),
+                ),
+                RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(studyPlanDetailProvider(planId));
+                    await ref.read(studyPlanDetailProvider(planId).future);
+                  },
+                  child: ListView(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    children: [
+                      if (plan.items.isEmpty)
+                        const _EmptyState(message: 'No study items found.')
+                      else
+                        ...plan.items.map(
+                          (item) => _StudyPlanItemCard(item: item),
+                        ),
+                    ],
+                  ),
+                ),
               ],
-            ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Text(
-              error.toString(),
-              textAlign: TextAlign.center,
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Text(
+                error.toString(),
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
         ),
@@ -378,64 +156,262 @@ class PlanDetailPage extends ConsumerWidget {
   }
 }
 
-class _DetailMiniStat extends StatelessWidget {
-  final String label;
-  final String value;
+class _OverviewCard extends StatelessWidget {
+  final String title;
+  final String status;
+  final String startDate;
+  final int dailyTargetMinutes;
+  final int totalSessions;
+  final int completedSessions;
+  final int remainingSessions;
+  final double progress;
+  final bool isActive;
+  final bool isPaused;
+  final bool isCancelled;
+  final bool isCompleted;
+  final VoidCallback onPause;
+  final VoidCallback onResume;
+  final VoidCallback onCancel;
 
-  const _DetailMiniStat({
-    required this.label,
-    required this.value,
+  const _OverviewCard({
+    required this.title,
+    required this.status,
+    required this.startDate,
+    required this.dailyTargetMinutes,
+    required this.totalSessions,
+    required this.completedSessions,
+    required this.remainingSessions,
+    required this.progress,
+    required this.isActive,
+    required this.isPaused,
+    required this.isCancelled,
+    required this.isCompleted,
+    required this.onPause,
+    required this.onResume,
+    required this.onCancel,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(color: AppColors.textSecondary)),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+    final progressPercent = (progress * 100).round();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Status: $status',
+              style: TextStyle(
+                color: isActive
+                    ? AppColors.success
+                    : isCancelled
+                        ? AppColors.warning
+                        : AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Start Date: $startDate',
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Daily Target: $dailyTargetMinutes min',
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Row(
+              children: [
+                Expanded(
+                  child: _DetailMiniStat(
+                    label: 'Total',
+                    value: '$totalSessions',
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: _DetailMiniStat(
+                    label: 'Completed',
+                    value: '$completedSessions',
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: _DetailMiniStat(
+                    label: 'Remaining',
+                    value: '$remainingSessions',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Row(
+              children: [
+                const Text(
+                  'Progress',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '$progressPercent%',
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 10,
+                backgroundColor: AppColors.border,
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            if (isActive || isPaused) ...[
+              Row(
+                children: [
+                  if (isActive)
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: onPause,
+                        child: const Text('Pause'),
+                      ),
+                    ),
+                  if (isPaused)
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: onResume,
+                        child: const Text('Resume'),
+                      ),
+                    ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: onCancel,
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                ],
+              ),
+            ] else if (isCancelled) ...[
+              const _StatusInfoBox(
+                message: 'This plan has been cancelled.',
+                color: AppColors.warning,
+              ),
+            ] else if (isCompleted) ...[
+              const _StatusInfoBox(
+                message: 'This plan has been completed.',
+                color: AppColors.success,
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 }
 
-class _MetaChip extends StatelessWidget {
-  final String label;
+class _SessionCard extends StatelessWidget {
+  final String title;
+  final String status;
+  final String scheduledAt;
+  final int plannedDurationMinutes;
+  final String? completedAt;
+  final int? actualDurationMinutes;
+  final String? notes;
 
-  const _MetaChip({required this.label});
+  const _SessionCard({
+    required this.title,
+    required this.status,
+    required this.scheduledAt,
+    required this.plannedDurationMinutes,
+    this.completedAt,
+    this.actualDurationMinutes,
+    this.notes,
+  });
+
+  bool get isCompleted => status.toLowerCase() == 'completed';
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 12,
-          color: AppColors.textSecondary,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _StatusPill(
+                    label: title,
+                    color: isCompleted ? AppColors.success : AppColors.warning,
+                  ),
+                  const Spacer(),
+                  Text(
+                    status,
+                    style: TextStyle(
+                      color: isCompleted
+                          ? AppColors.success
+                          : AppColors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Scheduled: $scheduledAt',
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Planned Duration: $plannedDurationMinutes min',
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
+              if (completedAt != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Completed At: $completedAt',
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+              ],
+              if (actualDurationMinutes != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Actual Duration: $actualDurationMinutes min',
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+              ],
+              if (notes != null && notes!.trim().isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  notes!,
+                  style: const TextStyle(color: AppColors.textPrimary),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -507,24 +483,7 @@ class _StudyPlanItemCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.10),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    item.status,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
+                _StatusPill(label: item.status, color: statusColor),
               ],
             ),
             const SizedBox(height: AppSpacing.md),
@@ -543,7 +502,7 @@ class _StudyPlanItemCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               Text(
                 chunk.content,
-                maxLines: 3,
+                maxLines: 4,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
@@ -579,6 +538,126 @@ class _StudyPlanItemCard extends StatelessWidget {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailMiniStat extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _DetailMiniStat({
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: AppColors.textSecondary)),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _StatusPill({
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        // ignore: deprecated_member_use
+        color: color.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusInfoBox extends StatelessWidget {
+  final String message;
+  final Color color;
+
+  const _StatusInfoBox({
+    required this.message,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        // ignore: deprecated_member_use
+        color: color.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        message,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final String message;
+
+  const _EmptyState({
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Text(
+          message,
+          style: const TextStyle(color: AppColors.textSecondary),
         ),
       ),
     );

@@ -48,11 +48,11 @@ class AuthService {
   }
 
   ApiException _mapDioException(DioException e) {
-  print('DIO ERROR TYPE: ${e.type}');
-  print('DIO ERROR MESSAGE: ${e.message}');
-  print('DIO STATUS CODE: ${e.response?.statusCode}');
-  print('DIO RESPONSE DATA: ${e.response?.data}');
-  print('DIO REQUEST URI: ${e.requestOptions.uri}');
+  // print('DIO ERROR TYPE: ${e.type}');
+  // print('DIO ERROR MESSAGE: ${e.message}');
+  // print('DIO STATUS CODE: ${e.response?.statusCode}');
+  // print('DIO RESPONSE DATA: ${e.response?.data}');
+  // print('DIO REQUEST URI: ${e.requestOptions.uri}');
 
   final data = e.response?.data;
 

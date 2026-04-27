@@ -349,6 +349,7 @@ class _NextSessionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
+                  // ignore: deprecated_member_use
                   color: AppColors.primary.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(16),
                 ),

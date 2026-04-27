@@ -123,7 +123,7 @@ class _MaterialListPageState extends ConsumerState<MaterialListPage> {
   onTap: () async {
     await context.push(
       '/materials/detail',
-      extra: material,
+      extra: material.id,
     );
   },
   onCreatePlan: () async {
@@ -197,6 +197,7 @@ class _MaterialCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     decoration: BoxDecoration(
+                      // ignore: deprecated_member_use
                       color: AppColors.primary.withOpacity(0.10),
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -252,7 +253,9 @@ Container(
   ),
   decoration: BoxDecoration(
     color: hasActivePlan
+        // ignore: deprecated_member_use
         ? AppColors.success.withOpacity(0.10)
+        // ignore: deprecated_member_use
         : AppColors.warning.withOpacity(0.10),
     borderRadius: BorderRadius.circular(999),
   ),
@@ -340,6 +343,7 @@ class _EmptyMaterialsState extends StatelessWidget {
             Icon(
               Icons.menu_book_outlined,
               size: 64,
+              // ignore: deprecated_member_use
               color: AppColors.textSecondary.withOpacity(0.7),
             ),
             const SizedBox(height: AppSpacing.lg),

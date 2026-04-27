@@ -71,12 +71,20 @@ class AppRouter {
         name: 'create-material',
         builder: (context, state) => const CreateMaterialPage(),
       ),
-      GoRoute(
+GoRoute(
   path: '/materials/detail',
-  name: 'material-detail',
   builder: (context, state) {
-    final material = state.extra as MaterialModel;
-    return MaterialDetailPage(material: material);
+    final extra = state.extra;
+
+    if (extra is String) {
+      return MaterialDetailPage(materialId: extra);
+    }
+
+    if (extra is MaterialModel) {
+      return MaterialDetailPage(materialId: extra.id);
+    }
+
+    throw Exception('MaterialDetailPage requires materialId');
   },
 ),
 GoRoute(

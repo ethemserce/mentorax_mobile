@@ -114,7 +114,9 @@ class _PlanCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: plan.isActive
+                        // ignore: deprecated_member_use
                         ? AppColors.success.withOpacity(0.10)
+                        // ignore: deprecated_member_use
                         : AppColors.warning.withOpacity(0.10),
                     borderRadius: BorderRadius.circular(999),
                   ),
@@ -312,6 +314,7 @@ class _EmptyPlansState extends StatelessWidget {
             Icon(
               Icons.auto_awesome_outlined,
               size: 64,
+              // ignore: deprecated_member_use
               color: AppColors.textSecondary.withOpacity(0.7),
             ),
             const SizedBox(height: AppSpacing.lg),

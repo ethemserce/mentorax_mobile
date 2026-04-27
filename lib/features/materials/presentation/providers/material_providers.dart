@@ -15,3 +15,8 @@ final materialListProvider =
     FutureProvider<List<MaterialModel>>((ref) async {
   return ref.read(materialRepositoryProvider).getMaterials();
 });
+
+final materialDetailProvider =
+    FutureProvider.family<MaterialModel, String>((ref, materialId) {
+  return ref.read(materialServiceProvider).getMaterialById(materialId);
+});

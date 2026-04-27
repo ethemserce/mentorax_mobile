@@ -34,6 +34,18 @@ class MaterialService {
   }
 }
 
+Future<MaterialModel> getMaterialById(String id) async {
+  try {
+    final response = await _dio.get('/api/materials/$id');
+
+    return MaterialModel.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+  } on DioException catch (e) {
+    throw _mapDioException(e);
+  }
+}
+
   ApiException _mapDioException(DioException e) {
     final data = e.response?.data;
 

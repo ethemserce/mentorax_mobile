@@ -30,6 +30,7 @@ class SettingsPage extends ConsumerWidget {
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
+                      // ignore: deprecated_member_use
                       color: AppColors.primary.withOpacity(0.10),
                       borderRadius: BorderRadius.circular(20),
                     ),
