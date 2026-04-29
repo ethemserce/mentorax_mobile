@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mentorax/core/state/app_refresh_controller.dart';
+import 'package:mentorax/shared/widgets/app_confirm_dialog.dart';
+import 'package:mentorax/shared/widgets/app_empty_state.dart';
+import 'package:mentorax/shared/widgets/app_snackbar.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
@@ -37,59 +40,41 @@ ref
     .refreshAfterChunkChanged(materialId);
   }
 
-  Future<void> _deleteChunk({
-    required BuildContext context,
-    required WidgetRef ref,
-    required String chunkId,
-  }) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Delete Chunk'),
-          content: const Text(
-            'Are you sure you want to delete this chunk? '
-            'If this chunk is used in a study plan, it cannot be deleted.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Delete'),
-            ),
-          ],
+Future<void> _deleteChunk({
+  required BuildContext context,
+  required WidgetRef ref,
+  required String chunkId,
+}) async {
+  final confirmed = await showAppConfirmDialog(
+    context: context,
+    title: 'Delete Chunk',
+    message:
+        'Are you sure you want to delete this chunk? If this chunk is used in a study plan, it cannot be deleted.',
+    confirmText: 'Delete',
+    isDanger: true,
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await ref.read(materialServiceProvider).deleteMaterialChunk(
+          materialId: materialId,
+          chunkId: chunkId,
         );
-      },
-    );
 
-    if (confirmed != true) return;
+    ref
+        .read(appRefreshControllerProvider)
+        .refreshAfterChunkChanged(materialId);
 
-    try {
-      await ref.read(materialServiceProvider).deleteMaterialChunk(
-            materialId: materialId,
-            chunkId: chunkId,
-          );
+    if (!context.mounted) return;
 
-ref
-    .read(appRefreshControllerProvider)
-    .refreshAfterChunkChanged(materialId);
+    showSuccessSnackBar(context, 'Chunk deleted');
+  } catch (e) {
+    if (!context.mounted) return;
 
-      if (!context.mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Chunk deleted')),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
-    }
+    showErrorSnackBar(context, e);
   }
+}
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -126,8 +111,8 @@ if (created == true) {
               },
               child: ListView(
                 padding: const EdgeInsets.all(AppSpacing.lg),
-                children: const [
-                  _EmptyChunksState(),
+                children: [
+                  _EmptyChunksState(materialId: materialId),
                 ],
               ),
             );
@@ -399,40 +384,22 @@ class _MetaChip extends StatelessWidget {
 }
 
 class _EmptyChunksState extends StatelessWidget {
-  const _EmptyChunksState();
+  final String materialId;
+
+  const _EmptyChunksState({
+    required this.materialId,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      child: Center(
-        child: Column(
-          children: [
-            Icon(
-              Icons.account_tree_outlined,
-              size: 64,
-              color: AppColors.textSecondary.withOpacity(0.7),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            const Text(
-              'No chunks found',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            const Text(
-              'Use the + button to split this material into smaller study parts.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return AppEmptyState(
+      icon: Icons.account_tree_outlined,
+      title: 'No chunks found',
+      subtitle: 'Use the + button to split this material into smaller study parts.',
+      actionText: 'Add Chunk',
+      onAction: () {
+        context.push('/materials/chunks/create', extra: materialId);
+      },
     );
   }
 }

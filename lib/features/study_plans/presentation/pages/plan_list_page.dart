@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mentorax/shared/widgets/app_empty_state.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../data/models/study_plan_model.dart';
@@ -305,38 +306,10 @@ class _EmptyPlansState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.auto_awesome_outlined,
-              size: 64,
-              // ignore: deprecated_member_use
-              color: AppColors.textSecondary.withOpacity(0.7),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            const Text(
-              'No study plans yet',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            const Text(
-              'Create a plan from a material to start generating sessions.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return const AppEmptyState(
+      icon: Icons.auto_awesome_outlined,
+      title: 'No study plans yet',
+      subtitle: 'Create a plan from a material to start generating study sessions.',
     );
   }
 }

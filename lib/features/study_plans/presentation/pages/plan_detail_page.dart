@@ -5,6 +5,8 @@ import 'package:mentorax/features/dashboard/presentation/providers/dashboard_pro
 import 'package:mentorax/features/materials/presentation/providers/material_providers.dart';
 import 'package:mentorax/features/study_plans/data/models/study_plan_item_model.dart';
 import 'package:mentorax/features/study_sessions/presentation/providers/study_session_providers.dart';
+import 'package:mentorax/shared/widgets/app_confirm_dialog.dart';
+import 'package:mentorax/shared/widgets/app_snackbar.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
@@ -93,6 +95,16 @@ onResume: () async {
       );
 },
 onComplete: () async {
+  final confirmed = await showAppConfirmDialog(
+    context: context,
+    title: 'Complete Plan',
+    message:
+        'Are you sure you want to complete this plan? Unfinished items will be marked as cancelled.',
+    confirmText: 'Complete',
+  );
+
+  if (!confirmed) return;
+
   await ref.read(studyPlanServiceProvider).completePlan(plan.id);
 
   ref.read(appRefreshControllerProvider).refreshAfterPlanChanged(
@@ -102,17 +114,30 @@ onComplete: () async {
 
   if (!context.mounted) return;
 
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Plan completed')),
-  );
+  showSuccessSnackBar(context, 'Plan completed');
 },
 onCancel: () async {
+  final confirmed = await showAppConfirmDialog(
+    context: context,
+    title: 'Cancel Plan',
+    message:
+        'Are you sure you want to cancel this plan? This action will stop future sessions for this plan.',
+    confirmText: 'Cancel Plan',
+    isDanger: true,
+  );
+
+  if (!confirmed) return;
+
   await ref.read(studyPlanServiceProvider).cancelPlan(plan.id);
 
   ref.read(appRefreshControllerProvider).refreshAfterPlanChanged(
         materialId: plan.learningMaterialId,
         planId: plan.id,
       );
+
+  if (!context.mounted) return;
+
+  showSuccessSnackBar(context, 'Plan cancelled');
 },
                       ),
                     ],

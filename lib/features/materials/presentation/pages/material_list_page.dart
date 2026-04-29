@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mentorax/shared/widgets/app_empty_state.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/state/app_refresh_controller.dart';
@@ -334,38 +335,14 @@ class _EmptyMaterialsState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.menu_book_outlined,
-              size: 64,
-              // ignore: deprecated_member_use
-              color: AppColors.textSecondary.withOpacity(0.7),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            const Text(
-              'No materials yet',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            const Text(
-              'Create your first learning material to start building study plans.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return AppEmptyState(
+      icon: Icons.menu_book_outlined,
+      title: 'No materials yet',
+      subtitle: 'Create your first learning material to start building study plans.',
+      actionText: 'Create Material',
+      onAction: () {
+        context.push('/materials/create');
+      },
     );
   }
 }
@@ -375,36 +352,10 @@ class _NoSearchResultState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.xl),
-      child: Center(
-        child: Column(
-          children: const [
-            Icon(
-              Icons.search_off,
-              size: 48,
-              color: AppColors.textSecondary,
-            ),
-            SizedBox(height: AppSpacing.md),
-            Text(
-              'No matching materials found',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            SizedBox(height: AppSpacing.sm),
-            Text(
-              'Try a different keyword, tag, or content phrase.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return const AppEmptyState(
+      icon: Icons.search_off_outlined,
+      title: 'No matching materials found',
+      subtitle: 'Try a different keyword, tag, or content phrase.',
     );
   }
 }

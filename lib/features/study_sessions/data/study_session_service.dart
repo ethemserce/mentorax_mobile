@@ -19,25 +19,7 @@ class StudySessionService {
     }
   }
 
-  ApiException _mapDioException(DioException e) {
-    final data = e.response?.data;
-
-    if (data is Map<String, dynamic>) {
-      final errorObj = data['error'] ?? data['Error'];
-
-      if (errorObj is Map<String, dynamic>) {
-        return ApiException(
-          message: errorObj['message']?.toString() ??
-              errorObj['Message']?.toString() ??
-              'An error occurred.',
-          code: errorObj['code']?.toString() ??
-              errorObj['Code']?.toString(),
-        );
-      }
-    }
-
-    return ApiException(
-      message: 'Network or server error occurred.',
-    );
-  }
+ApiException _mapDioException(DioException e) {
+  return ApiException.fromDioException(e);
+}
 }

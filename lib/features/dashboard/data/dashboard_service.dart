@@ -56,20 +56,8 @@ class DashboardService {
     }
   }
 
-  ApiException _mapDioException(DioException e) {
-    final data = e.response?.data;
+ApiException _mapDioException(DioException e) {
+  return ApiException.fromDioException(e);
+}
 
-    if (data is Map<String, dynamic> && data['error'] is Map<String, dynamic>) {
-      final error = data['error'] as Map<String, dynamic>;
-
-      return ApiException(
-        message: error['message']?.toString() ?? 'An error occurred.',
-        code: error['code']?.toString(),
-      );
-    }
-
-    return ApiException(
-      message: 'Network or server error occurred.',
-    );
-  }
 }
