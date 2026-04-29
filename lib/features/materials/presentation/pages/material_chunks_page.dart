@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mentorax/core/state/app_refresh_controller.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
@@ -31,9 +32,9 @@ class MaterialChunksPage extends ConsumerWidget {
           chunkIds: updated.map((x) => x.id).toList(),
         );
 
-    ref.invalidate(materialChunksProvider(materialId));
-    ref.invalidate(materialDetailProvider(materialId));
-    ref.invalidate(materialListProvider);
+ref
+    .read(appRefreshControllerProvider)
+    .refreshAfterChunkChanged(materialId);
   }
 
   Future<void> _deleteChunk({
@@ -72,9 +73,9 @@ class MaterialChunksPage extends ConsumerWidget {
             chunkId: chunkId,
           );
 
-      ref.invalidate(materialChunksProvider(materialId));
-      ref.invalidate(materialDetailProvider(materialId));
-      ref.invalidate(materialListProvider);
+ref
+    .read(appRefreshControllerProvider)
+    .refreshAfterChunkChanged(materialId);
 
       if (!context.mounted) return;
 
@@ -105,11 +106,11 @@ class MaterialChunksPage extends ConsumerWidget {
                 extra: materialId,
               );
 
-              if (created == true) {
-                ref.invalidate(materialChunksProvider(materialId));
-                ref.invalidate(materialDetailProvider(materialId));
-                ref.invalidate(materialListProvider);
-              }
+if (created == true) {
+  ref
+      .read(appRefreshControllerProvider)
+      .refreshAfterChunkChanged(materialId);
+}
             },
             icon: const Icon(Icons.add_outlined),
           ),
@@ -154,11 +155,11 @@ class MaterialChunksPage extends ConsumerWidget {
                       extra: chunk,
                     );
 
-                    if (updated == true) {
-                      ref.invalidate(materialChunksProvider(materialId));
-                      ref.invalidate(materialDetailProvider(materialId));
-                      ref.invalidate(materialListProvider);
-                    }
+if (updated == true) {
+  ref
+      .read(appRefreshControllerProvider)
+      .refreshAfterChunkChanged(materialId);
+}
                   },
                   onMoveUp: index == 0
                       ? null

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mentorax/core/state/app_refresh_controller.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
@@ -87,10 +88,8 @@ class _EditMaterialChunkPageState extends ConsumerState<EditMaterialChunkPage> {
             ),
           );
 
-      ref.invalidate(materialChunksProvider(widget.chunk.learningMaterialId));
-      ref.invalidate(materialDetailProvider(widget.chunk.learningMaterialId));
-      ref.invalidate(materialListProvider);
-
+      ref.read(appRefreshControllerProvider).refreshAfterChunkChanged(widget.chunk.learningMaterialId);
+  
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(

@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mentorax/core/notifications/study_reminder_service.dart';
-import 'package:mentorax/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:mentorax/features/materials/presentation/providers/material_providers.dart';
 import 'package:mentorax/features/progress/presentation/providers/progress_providers.dart';
-import 'package:mentorax/features/study_plans/presentation/providers/study_plan_providers.dart';
 import 'package:mentorax/features/study_sessions/presentation/providers/session_timer_providers.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
@@ -59,86 +56,81 @@ void initState() {
     super.dispose();
   }
 
-  Future<void> _completeSession() async {
-    final duration = int.tryParse(_durationController.text.trim());
+Future<void> _completeSession() async {
+  final duration = int.tryParse(_durationController.text.trim());
 
-    if (duration == null || duration <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid duration')),
-      );
-      return;
-    }
+  if (duration == null || duration <= 0) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Enter a valid duration')),
+    );
+    return;
+  }
 
-    setState(() {
-      _isSubmitting = true;
-    });
+  setState(() {
+    _isSubmitting = true;
+  });
+
+  try {
+    await ref.read(sessionDashboardRepositoryProvider).completeSession(
+          sessionId: widget.session.sessionId,
+          qualityScore: _qualityScore.toInt(),
+          difficultyScore: _difficultyScore.toInt(),
+          actualDurationMinutes: duration,
+          reviewNotes: _notesController.text.trim().isEmpty
+              ? null
+              : _notesController.text.trim(),
+        );
+
+    await StudyReminderService.instance.cancelForSession(
+      widget.session.sessionId,
+    );
+
+    ref.read(sessionTimerProvider.notifier).reset();
+
+    ref.read(appRefreshControllerProvider).refreshAfterSessionCompleted(
+          materialId: widget.session.materialId,
+          planId: widget.session.studyPlanId,
+        );
 
     try {
-      await ref.read(sessionDashboardRepositoryProvider).completeSession(
-            sessionId: widget.session.sessionId,
-            qualityScore: _qualityScore.toInt(),
-            difficultyScore: _difficultyScore.toInt(),
-            actualDurationMinutes: duration,
-            reviewNotes: _notesController.text.trim().isEmpty
-                ? null
-                : _notesController.text.trim(),
-          );
-// GLOBAL REFRESH
-      ref.invalidate(nextSessionProvider);
-      ref.invalidate(dashboardProvider); // varsa
-
-      ref.invalidate(studyPlansProvider);
-      ref.invalidate(studyPlanDetailProvider(widget.session.studyPlanId));
-      ref.invalidate(materialListProvider);
-      ref.invalidate(materialDetailProvider(widget.session.materialId));
-
-      // eğer global refresh controller kullanıyorsan
-      ref.read(appRefreshControllerProvider).refreshAfterPlanCreated();
-
-      // NAVIGATION
-      if (!mounted) return;
-      context.go('/dashboard');
-
-      await StudyReminderService.instance.cancelForSession(widget.session.sessionId);
-
-      ref.read(appRefreshControllerProvider).refreshAfterSessionCompleted();
-      ref.read(sessionTimerProvider.notifier).reset();
-
-try {
-  final refreshedNextSession = await ref.refresh(nextSessionProvider.future);
-  await StudyReminderService.instance.scheduleForNextSession(refreshedNextSession);
-} catch (_) {}
-
-final updatedProgress = await ref.refresh(progressSummaryProvider.future);
-
-if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Session completed')),
+      final refreshedNextSession = await ref.refresh(nextSessionProvider.future);
+      await StudyReminderService.instance.scheduleForNextSession(
+        refreshedNextSession,
       );
-     
-     context.go(
-  '/session-success',
-  extra: {
-    'durationMinutes': duration,
-    'qualityScore': _qualityScore.toInt(),
-    'streakDays': updatedProgress.currentStreakDays,
-  },
-);
-    } catch (e) {
-      if (!mounted) return;
+    } catch (_) {
+      // Yeni next session olmayabilir. Örneğin plan completed/cancelled olabilir.
+    }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
-      }
+    final updatedProgress = await ref.refresh(progressSummaryProvider.future);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Session completed')),
+    );
+
+    context.go(
+      '/session-success',
+      extra: {
+        'durationMinutes': duration,
+        'qualityScore': _qualityScore.toInt(),
+        'streakDays': updatedProgress.currentStreakDays,
+      },
+    );
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(e.toString())),
+    );
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isSubmitting = false;
+      });
     }
   }
+}
 
   String _qualityLabel() {
     switch (_qualityScore.toInt()) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mentorax/core/state/app_refresh_controller.dart';
 import 'package:mentorax/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:mentorax/features/materials/presentation/providers/material_providers.dart';
 import 'package:mentorax/features/study_plans/data/models/study_plan_item_model.dart';
@@ -77,47 +78,42 @@ class PlanDetailPage extends ConsumerWidget {
                         isPaused: isPaused,
                         onPause: () async {
                           await ref.read(studyPlanServiceProvider).pausePlan(plan.id);
-                          ref.invalidate(studyPlanDetailProvider(plan.id));
-                          ref.invalidate(studyPlansProvider);
-                          ref.invalidate(materialListProvider);
-                          ref.invalidate(materialDetailProvider(plan.learningMaterialId));
-                          ref.invalidate(nextSessionProvider);
-                          ref.invalidate(dashboardProvider);
-                        },
-                        onResume: () async {
-                          await ref.read(studyPlanServiceProvider).resumePlan(plan.id);
-                          ref.invalidate(studyPlanDetailProvider(plan.id));
-                          ref.invalidate(studyPlansProvider);
-                          ref.invalidate(materialListProvider);
-                          ref.invalidate(materialDetailProvider(plan.learningMaterialId));
-                          ref.invalidate(nextSessionProvider);
-                          ref.invalidate(dashboardProvider);
-                        },
-                        onComplete: () async {
-                          await ref.read(studyPlanServiceProvider).completePlan(plan.id);
 
-                          ref.invalidate(studyPlanDetailProvider(plan.id));
-                          ref.invalidate(studyPlansProvider);
-                          ref.invalidate(materialListProvider);
-                          ref.invalidate(materialDetailProvider(plan.learningMaterialId));
-                          ref.invalidate(nextSessionProvider);
-                          ref.invalidate(dashboardProvider);
-
-                          if (!context.mounted) return;
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Plan completed')),
-                          );
+                          ref.read(appRefreshControllerProvider).refreshAfterPlanChanged(
+                                materialId: plan.learningMaterialId,
+                                planId: plan.id,
+                              );
                         },
-                        onCancel: () async {
-                          await ref.read(studyPlanServiceProvider).cancelPlan(plan.id);
-                          ref.invalidate(studyPlanDetailProvider(plan.id));
-                          ref.invalidate(studyPlansProvider);
-                          ref.invalidate(materialListProvider);
-                          ref.invalidate(materialDetailProvider(plan.learningMaterialId));
-                          ref.invalidate(nextSessionProvider);
-                          ref.invalidate(dashboardProvider);
-                        },
+onResume: () async {
+  await ref.read(studyPlanServiceProvider).resumePlan(plan.id);
+
+  ref.read(appRefreshControllerProvider).refreshAfterPlanChanged(
+        materialId: plan.learningMaterialId,
+        planId: plan.id,
+      );
+},
+onComplete: () async {
+  await ref.read(studyPlanServiceProvider).completePlan(plan.id);
+
+  ref.read(appRefreshControllerProvider).refreshAfterPlanChanged(
+        materialId: plan.learningMaterialId,
+        planId: plan.id,
+      );
+
+  if (!context.mounted) return;
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('Plan completed')),
+  );
+},
+onCancel: () async {
+  await ref.read(studyPlanServiceProvider).cancelPlan(plan.id);
+
+  ref.read(appRefreshControllerProvider).refreshAfterPlanChanged(
+        materialId: plan.learningMaterialId,
+        planId: plan.id,
+      );
+},
                       ),
                     ],
                   ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mentorax/core/state/app_refresh_controller.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
@@ -72,9 +73,7 @@ class _CreateMaterialChunkPageState
             ),
           );
 
-      ref.invalidate(materialChunksProvider(widget.materialId));
-      ref.invalidate(materialDetailProvider(widget.materialId));
-      ref.invalidate(materialListProvider);
+      ref.read(appRefreshControllerProvider).refreshAfterChunkChanged(widget.materialId);
 
       if (!mounted) return;
 
