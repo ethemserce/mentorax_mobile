@@ -76,14 +76,14 @@ class PlanDetailPage extends ConsumerWidget {
                         isCancelled: isCancelled,
                         isCompleted: isCompleted,
                         isPaused: isPaused,
-                        onPause: () async {
-                          await ref.read(studyPlanServiceProvider).pausePlan(plan.id);
+onPause: () async {
+  await ref.read(studyPlanServiceProvider).pausePlan(plan.id);
 
-                          ref.read(appRefreshControllerProvider).refreshAfterPlanChanged(
-                                materialId: plan.learningMaterialId,
-                                planId: plan.id,
-                              );
-                        },
+  ref.read(appRefreshControllerProvider).refreshAfterPlanChanged(
+        materialId: plan.learningMaterialId,
+        planId: plan.id,
+      );
+},
 onResume: () async {
   await ref.read(studyPlanServiceProvider).resumePlan(plan.id);
 
