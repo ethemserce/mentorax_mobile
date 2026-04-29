@@ -1,4 +1,4 @@
-import 'material_chunk_model.dart';
+import 'package:mentorax/features/materials/data/models/material_chunk_model.dart';
 import 'study_plan_session_model.dart';
 
 class StudyPlanItemModel {

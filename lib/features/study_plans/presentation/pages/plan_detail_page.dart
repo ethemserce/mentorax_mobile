@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mentorax/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:mentorax/features/materials/presentation/providers/material_providers.dart';
 import 'package:mentorax/features/study_plans/data/models/study_plan_item_model.dart';
+import 'package:mentorax/features/study_sessions/presentation/providers/study_session_providers.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
@@ -76,16 +79,44 @@ class PlanDetailPage extends ConsumerWidget {
                           await ref.read(studyPlanServiceProvider).pausePlan(plan.id);
                           ref.invalidate(studyPlanDetailProvider(plan.id));
                           ref.invalidate(studyPlansProvider);
+                          ref.invalidate(materialListProvider);
+                          ref.invalidate(materialDetailProvider(plan.learningMaterialId));
+                          ref.invalidate(nextSessionProvider);
+                          ref.invalidate(dashboardProvider);
                         },
                         onResume: () async {
                           await ref.read(studyPlanServiceProvider).resumePlan(plan.id);
                           ref.invalidate(studyPlanDetailProvider(plan.id));
                           ref.invalidate(studyPlansProvider);
+                          ref.invalidate(materialListProvider);
+                          ref.invalidate(materialDetailProvider(plan.learningMaterialId));
+                          ref.invalidate(nextSessionProvider);
+                          ref.invalidate(dashboardProvider);
+                        },
+                        onComplete: () async {
+                          await ref.read(studyPlanServiceProvider).completePlan(plan.id);
+
+                          ref.invalidate(studyPlanDetailProvider(plan.id));
+                          ref.invalidate(studyPlansProvider);
+                          ref.invalidate(materialListProvider);
+                          ref.invalidate(materialDetailProvider(plan.learningMaterialId));
+                          ref.invalidate(nextSessionProvider);
+                          ref.invalidate(dashboardProvider);
+
+                          if (!context.mounted) return;
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Plan completed')),
+                          );
                         },
                         onCancel: () async {
                           await ref.read(studyPlanServiceProvider).cancelPlan(plan.id);
                           ref.invalidate(studyPlanDetailProvider(plan.id));
                           ref.invalidate(studyPlansProvider);
+                          ref.invalidate(materialListProvider);
+                          ref.invalidate(materialDetailProvider(plan.learningMaterialId));
+                          ref.invalidate(nextSessionProvider);
+                          ref.invalidate(dashboardProvider);
                         },
                       ),
                     ],
@@ -172,6 +203,7 @@ class _OverviewCard extends StatelessWidget {
   final VoidCallback onPause;
   final VoidCallback onResume;
   final VoidCallback onCancel;
+  final VoidCallback onComplete;
 
   const _OverviewCard({
     required this.title,
@@ -189,6 +221,7 @@ class _OverviewCard extends StatelessWidget {
     required this.onPause,
     required this.onResume,
     required this.onCancel,
+    required this.onComplete,
   });
 
   @override
@@ -303,6 +336,14 @@ class _OverviewCard extends StatelessWidget {
                         child: const Text('Resume'),
                       ),
                     ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: onComplete,
+                      icon: const Icon(Icons.done_all_outlined),
+                      label: const Text('Complete'),
+                    ),
+                  ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: OutlinedButton(

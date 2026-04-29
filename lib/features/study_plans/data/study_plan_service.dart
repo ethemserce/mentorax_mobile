@@ -33,6 +33,10 @@ Future<void> cancelPlan(String id) async {
   await _dio.post('/api/study-plans/$id/cancel');
 }
 
+Future<void> completePlan(String id) async {
+  await _dio.post('/api/study-plans/$id/complete');
+}
+
   Future<List<StudyPlanModel>> getPlans() async {
     try {
       final response = await _dio.get('/api/study-plans');

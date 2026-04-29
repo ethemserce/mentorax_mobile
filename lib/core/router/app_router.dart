@@ -1,5 +1,10 @@
 import 'package:go_router/go_router.dart';
+import 'package:mentorax/features/materials/data/models/material_chunk_model.dart';
 import 'package:mentorax/features/materials/data/models/material_model.dart';
+import 'package:mentorax/features/materials/presentation/pages/create_material_chunk_page.dart';
+import 'package:mentorax/features/materials/presentation/pages/edit_material_chunk_page.dart';
+import 'package:mentorax/features/materials/presentation/pages/material_chunk_detail_page.dart';
+import 'package:mentorax/features/materials/presentation/pages/material_chunks_page.dart';
 import 'package:mentorax/features/materials/presentation/pages/material_detail_page.dart';
 import 'package:mentorax/features/progress/presentation/pages/progress_page.dart';
 import 'package:mentorax/features/settings/presentation/pages/notification_test_page.dart';
@@ -144,6 +149,38 @@ GoRoute(
   path: '/settings/reminder-debug',
   name: 'reminder-debug',
   builder: (context, state) => const ReminderDebugPage(),
+),
+GoRoute(
+  path: '/materials/chunks',
+  name: 'material-chunks',
+  builder: (context, state) {
+    final materialId = state.extra as String;
+    return MaterialChunksPage(materialId: materialId);
+  },
+),
+GoRoute(
+  path: '/materials/chunks/detail',
+  name: 'material-chunk-detail',
+  builder: (context, state) {
+    final chunk = state.extra as MaterialChunkModel;
+    return MaterialChunkDetailPage(chunk: chunk);
+  },
+),
+GoRoute(
+  path: '/materials/chunks/edit',
+  name: 'material-chunk-edit',
+  builder: (context, state) {
+    final chunk = state.extra as MaterialChunkModel;
+    return EditMaterialChunkPage(chunk: chunk);
+  },
+),
+GoRoute(
+  path: '/materials/chunks/create',
+  name: 'material-chunk-create',
+  builder: (context, state) {
+    final materialId = state.extra as String;
+    return CreateMaterialChunkPage(materialId: materialId);
+  },
 ),
 GoRoute(
   path: '/session-complete',

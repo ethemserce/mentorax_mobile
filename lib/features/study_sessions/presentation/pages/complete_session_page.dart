@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mentorax/core/notifications/study_reminder_service.dart';
 import 'package:mentorax/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:mentorax/features/materials/presentation/providers/material_providers.dart';
 import 'package:mentorax/features/progress/presentation/providers/progress_providers.dart';
 import 'package:mentorax/features/study_plans/presentation/providers/study_plan_providers.dart';
 import 'package:mentorax/features/study_sessions/presentation/providers/session_timer_providers.dart';
@@ -88,12 +89,14 @@ void initState() {
 
       ref.invalidate(studyPlansProvider);
       ref.invalidate(studyPlanDetailProvider(widget.session.studyPlanId));
+      ref.invalidate(materialListProvider);
+      ref.invalidate(materialDetailProvider(widget.session.materialId));
 
       // eğer global refresh controller kullanıyorsan
       ref.read(appRefreshControllerProvider).refreshAfterPlanCreated();
 
       // NAVIGATION
-      // ignore: use_build_context_synchronously
+      if (!mounted) return;
       context.go('/dashboard');
 
       await StudyReminderService.instance.cancelForSession(widget.session.sessionId);

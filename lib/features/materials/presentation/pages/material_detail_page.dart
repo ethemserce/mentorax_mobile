@@ -50,7 +50,6 @@ class MaterialDetailPage extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.all(AppSpacing.md),
                           decoration: BoxDecoration(
-                            // ignore: deprecated_member_use
                             color: AppColors.primary.withOpacity(0.10),
                             borderRadius: BorderRadius.circular(18),
                           ),
@@ -90,37 +89,47 @@ class MaterialDetailPage extends ConsumerWidget {
 
                 const SizedBox(height: AppSpacing.lg),
 
-                if (material.description != null &&
-                    material.description!.trim().isNotEmpty) ...[
-                  const _SectionTitle(title: 'Description'),
-                  const SizedBox(height: AppSpacing.md),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      child: Text(
-                        material.description!,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                ],
+                _ActionPanel(
+                  hasActivePlan: material.hasActivePlan,
+                  activePlanTitle: material.activePlanTitle,
+                  onViewPlan: () {
+                    if (material.hasActivePlan &&
+                        material.activePlanId != null) {
+                      context.push(
+                        '/plans/detail',
+                        extra: material.activePlanId,
+                      );
+                      return;
+                    }
 
-                const _SectionTitle(title: 'Content'),
-                const SizedBox(height: AppSpacing.md),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Text(
-                      material.content,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        height: 1.5,
-                      ),
-                    ),
-                  ),
+                    context.push('/plans', extra: material.id);
+                  },
+                  onViewChunks: () {
+                    context.push('/materials/chunks', extra: material.id);
+                  },
+                  onCreatePlan: material.hasActivePlan
+                      ? null
+                      : () async {
+                          final created = await context.push(
+                            '/plans/create',
+                            extra: material.id,
+                          );
+
+                          if (created == true) {
+                            ref.invalidate(materialDetailProvider(materialId));
+                            ref.invalidate(materialListProvider);
+                            ref
+                                .read(appRefreshControllerProvider)
+                                .refreshAfterPlanCreated();
+
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Plan created for this material'),
+                              ),
+                            );
+                          }
+                        },
                 ),
 
                 const SizedBox(height: AppSpacing.lg),
@@ -136,9 +145,7 @@ class MaterialDetailPage extends ConsumerWidget {
                           padding: const EdgeInsets.all(AppSpacing.md),
                           decoration: BoxDecoration(
                             color: material.hasActivePlan
-                                // ignore: deprecated_member_use
                                 ? AppColors.success.withOpacity(0.10)
-                                // ignore: deprecated_member_use
                                 : AppColors.warning.withOpacity(0.10),
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -183,6 +190,41 @@ class MaterialDetailPage extends ConsumerWidget {
                   ),
                 ),
 
+                const SizedBox(height: AppSpacing.lg),
+
+                const _SectionTitle(title: 'Content'),
+                const SizedBox(height: AppSpacing.md),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Text(
+                      material.content,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+
+                if (material.description != null &&
+                    material.description!.trim().isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  const _SectionTitle(title: 'Description'),
+                  const SizedBox(height: AppSpacing.md),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Text(
+                        material.description!,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+
                 if (tags.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.lg),
                   const _SectionTitle(title: 'Tags'),
@@ -193,47 +235,6 @@ class MaterialDetailPage extends ConsumerWidget {
                     children: tags.map((tag) => _TagChip(label: tag)).toList(),
                   ),
                 ],
-
-                const SizedBox(height: AppSpacing.xl),
-
-                OutlinedButton.icon(
-                  onPressed: () {
-                    context.push('/plans', extra: material.id);
-                  },
-                  icon: const Icon(Icons.list_alt_outlined),
-                  label: const Text('View Plans'),
-                ),
-
-                const SizedBox(height: AppSpacing.md),
-
-                AppPrimaryButton(
-                  text: material.hasActivePlan
-                      ? 'Plan Already Exists'
-                      : 'Create Study Plan',
-                  onPressed: material.hasActivePlan
-                      ? null
-                      : () async {
-                          final created = await context.push(
-                            '/plans/create',
-                            extra: material.id,
-                          );
-
-                          if (created == true) {
-                            ref.invalidate(materialDetailProvider(materialId));
-                            ref.invalidate(materialListProvider);
-                            ref
-                                .read(appRefreshControllerProvider)
-                                .refreshAfterPlanCreated();
-
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Plan created for this material'),
-                              ),
-                            );
-                          }
-                        },
-                ),
 
                 const SizedBox(height: AppSpacing.xl),
               ],
@@ -249,6 +250,114 @@ class MaterialDetailPage extends ConsumerWidget {
               textAlign: TextAlign.center,
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionPanel extends StatelessWidget {
+  final bool hasActivePlan;
+  final String? activePlanTitle;
+  final VoidCallback onViewPlan;
+  final VoidCallback onViewChunks;
+  final VoidCallback? onCreatePlan;
+
+  const _ActionPanel({
+    required this.hasActivePlan,
+    required this.activePlanTitle,
+    required this.onViewPlan,
+    required this.onViewChunks,
+    required this.onCreatePlan,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Quick Actions',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              hasActivePlan
+                  ? 'Continue with your active plan or review chunks.'
+                  : 'Create a plan or review material chunks first.',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            if (hasActivePlan && activePlanTitle != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.success.withOpacity(0.18),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.check_circle_outline,
+                      color: AppColors.success,
+                      size: 20,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        activePlanTitle!,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.lg),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onViewPlan,
+                    icon: const Icon(Icons.list_alt_outlined),
+                    label: Text(hasActivePlan ? 'View Plan' : 'View Plans'),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onViewChunks,
+                    icon: const Icon(Icons.account_tree_outlined),
+                    label: const Text('View Chunks'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(
+              width: double.infinity,
+              child: AppPrimaryButton(
+                text: hasActivePlan ? 'Plan Already Exists' : 'Create Study Plan',
+                onPressed: onCreatePlan,
+              ),
+            ),
+          ],
         ),
       ),
     );
