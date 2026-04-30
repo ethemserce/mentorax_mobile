@@ -1,21 +1,28 @@
+// lib/core/api/dio_client.dart
+
 import 'package:dio/dio.dart';
+
 import '../auth/auth_session.dart';
 import '../config/app_config.dart';
 import '../storage/token_storage.dart';
 
 class DioClient {
-  static final Dio dio = Dio(
-    BaseOptions(
-      baseUrl: AppConfig.baseUrl,
-      connectTimeout: const Duration(seconds: 20),
-      receiveTimeout: const Duration(seconds: 20),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-    ),
-  )
-    ..interceptors.add(
+  static final Dio dio = _createDio();
+
+  static Dio _createDio() {
+    final client = Dio(
+      BaseOptions(
+        baseUrl: AppConfig.baseUrl,
+        connectTimeout: const Duration(seconds: 20),
+        receiveTimeout: const Duration(seconds: 20),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ),
+    );
+
+    client.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           final token = await TokenStorage().getToken();
@@ -37,12 +44,18 @@ class DioClient {
           handler.next(error);
         },
       ),
-    )
-    ..interceptors.add(
-      LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-        requestHeader: true,
-      ),
     );
+
+    if (AppConfig.enableNetworkLog) {
+      client.interceptors.add(
+        LogInterceptor(
+          requestBody: true,
+          responseBody: true,
+          requestHeader: true,
+        ),
+      );
+    }
+
+    return client;
+  }
 }
