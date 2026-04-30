@@ -78,7 +78,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
       await ref
           .read(authControllerProvider.notifier)
-          .setAuthenticated(result.token);
+          .setAuthenticated(result.accessToken);
 
       if (!mounted) return;
       context.go('/dashboard');
