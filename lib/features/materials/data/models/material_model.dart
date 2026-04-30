@@ -25,20 +25,22 @@ class MaterialModel {
     required this.activePlanTitle,
   });
 
-  factory MaterialModel.fromJson(Map<String, dynamic> json) {
-    return MaterialModel(
-      id: json['id']?.toString() ?? '',
-      userId: json['userId']?.toString() ?? '',
-      title: json['title']?.toString() ?? 'Untitled Material',
-      materialType: json['materialType']?.toString() ?? 'Text',
-      content: json['content']?.toString() ?? '',
-      estimatedDurationMinutes:
-          (json['estimatedDurationMinutes'] as num?)?.toInt() ?? 0,
-      description: json['description']?.toString(),
-      tags: json['tags']?.toString(),
-      hasActivePlan: json['hasActivePlan'] == true,
-      activePlanId: json['activePlanId']?.toString(),
-      activePlanTitle: json['activePlanTitle']?.toString(),
-    );
-  }
+factory MaterialModel.fromJson(Map<String, dynamic> json) {
+  return MaterialModel(
+    id: json['id']?.toString() ?? '',
+    userId: json['userId']?.toString() ?? '',
+    title: json['title']?.toString() ?? '',
+    materialType: json['materialType']?.toString() ?? 'Text',
+    content: json['content']?.toString() ?? '',
+    estimatedDurationMinutes:
+        json['estimatedDurationMinutes'] is int
+            ? json['estimatedDurationMinutes'] as int
+            : int.tryParse(json['estimatedDurationMinutes']?.toString() ?? '') ?? 0,
+    description: json['description']?.toString(),
+    tags: json['tags']?.toString(),
+    hasActivePlan: json['hasActivePlan'] as bool? ?? false,
+    activePlanId: json['activePlanId']?.toString(),
+    activePlanTitle: json['activePlanTitle']?.toString(),
+  );
+}
 }
