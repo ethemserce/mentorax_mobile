@@ -89,7 +89,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
       await ref
           .read(authControllerProvider.notifier)
-          .setAuthenticated(result.token);
+          .setAuthenticated(result.accessToken);
 
       if (!mounted) return;
       context.go('/dashboard');

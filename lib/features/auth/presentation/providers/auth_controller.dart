@@ -26,4 +26,5 @@ class AuthController extends StateNotifier<AuthState> {
     await _tokenStorage.clearToken();
     state = const AuthState.unauthenticated();
   }
+  
 }

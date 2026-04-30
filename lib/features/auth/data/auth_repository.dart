@@ -17,7 +17,10 @@ class AuthRepository {
       password: password,
     );
 
-    await _tokenStorage.saveToken(result.token);
+    await _tokenStorage.saveTokens(
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    );
     return result;
   }
 
@@ -32,7 +35,7 @@ class AuthRepository {
       password: password,
     );
 
-    await _tokenStorage.saveToken(result.token);
+    await _tokenStorage.saveToken(result.accessToken);
     return result;
   }
   
