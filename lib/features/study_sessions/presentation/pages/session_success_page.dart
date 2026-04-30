@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
-import '../../../../core/constants/streak_milestones.dart';
-import '../../../../shared/widgets/app_primary_button.dart';
 
 class SessionSuccessPage extends StatelessWidget {
   final int durationMinutes;
@@ -17,140 +16,187 @@ class SessionSuccessPage extends StatelessWidget {
     required this.streakDays,
   });
 
-  String _getMessage() {
-    if (qualityScore >= 4) {
-      return 'Excellent work! Your recall is strong.';
-    } else if (qualityScore >= 3) {
-      return 'Good job! Keep reinforcing your memory.';
-    } else {
-      return 'Keep practicing. You will improve!';
+  String get _qualityLabel {
+    switch (qualityScore) {
+      case 0:
+        return 'Forgot';
+      case 1:
+        return 'Very hard';
+      case 2:
+        return 'Hard';
+      case 3:
+        return 'Okay';
+      case 4:
+        return 'Good';
+      case 5:
+        return 'Excellent';
+      default:
+        return 'Good';
     }
+  }
+
+  String get _message {
+    if (qualityScore >= 4) {
+      return 'Great work! This session will help strengthen your memory.';
+    }
+
+    if (qualityScore == 3) {
+      return 'Good effort. A future review will help you remember better.';
+    }
+
+    return 'No problem. MentoraX will schedule another review sooner.';
   }
 
   @override
   Widget build(BuildContext context) {
-    final isMilestone = StreakMilestones.isMilestone(streakDays);
-    final milestoneTitle = StreakMilestones.getTitle(streakDays);
-    final milestoneMessage = StreakMilestones.getMessage(streakDays);
-
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.emoji_events,
-              size: 80,
-              color: AppColors.primary,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            const Text(
-              'Session Completed',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              _getMessage(),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _StatBox(
-                  label: 'Duration',
-                  value: '$durationMinutes min',
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            children: [
+              const Spacer(),
+
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.10),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(width: AppSpacing.lg),
-                _StatBox(
-                  label: 'Score',
-                  value: '$qualityScore / 5',
+                child: const Icon(
+                  Icons.check_circle_outline,
+                  color: AppColors.success,
+                  size: 72,
                 ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              decoration: BoxDecoration(
-                // ignore: deprecated_member_use
-                color: AppColors.primary.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(20),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+
+              const SizedBox(height: AppSpacing.xl),
+
+              const Text(
+                'Session Completed!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.md),
+
+              Text(
+                _message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  height: 1.5,
+                  fontSize: 15,
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.xl),
+
+              Row(
                 children: [
-                  const Icon(
-                    Icons.local_fire_department,
-                    color: AppColors.primary,
+                  Expanded(
+                    child: _StatCard(
+                      icon: Icons.timer_outlined,
+                      title: 'Duration',
+                      value: '$durationMinutes min',
+                    ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    'Current streak: $streakDays day${streakDays == 1 ? '' : 's'}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: _StatCard(
+                      icon: Icons.psychology_alt_outlined,
+                      title: 'Memory',
+                      value: _qualityLabel,
                     ),
                   ),
                 ],
               ),
-            ),
-            if (isMilestone) ...[
-              const SizedBox(height: AppSpacing.lg),
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primary, AppColors.secondary],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(24),
+
+              const SizedBox(height: AppSpacing.md),
+
+              _StreakCard(
+                streakDays: streakDays,
+              ),
+
+              const Spacer(),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    context.go('/dashboard');
+                  },
+                  icon: const Icon(Icons.dashboard_outlined),
+                  label: const Text('Go to Dashboard'),
                 ),
-                child: Column(
-                  children: [
-                    const Icon(
-                      Icons.workspace_premium,
-                      color: Colors.white,
-                      size: 40,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Text(
-                      milestoneTitle,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      milestoneMessage,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
+              ),
+
+              const SizedBox(height: AppSpacing.md),
+
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    context.go('/dashboard');
+                  },
+                  icon: const Icon(Icons.arrow_forward_outlined),
+                  label: const Text('See Next Session'),
                 ),
               ),
             ],
-            const SizedBox(height: AppSpacing.xl),
-            AppPrimaryButton(
-              text: 'Back to Dashboard',
-              onPressed: () {
-                context.go('/dashboard');
-              },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+
+  const _StatCard({
+    required this.icon,
+    required this.title,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: AppColors.primary,
+              size: 30,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              value,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
             ),
           ],
         ),
@@ -159,41 +205,62 @@ class SessionSuccessPage extends StatelessWidget {
   }
 }
 
-class _StatBox extends StatelessWidget {
-  final String label;
-  final String value;
+class _StreakCard extends StatelessWidget {
+  final int streakDays;
 
-  const _StatBox({
-    required this.label,
-    required this.value,
+  const _StreakCard({
+    required this.streakDays,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+    final hasStreak = streakDays > 0;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.local_fire_department_outlined,
+                color: AppColors.warning,
+                size: 30,
+              ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hasStreak ? '$streakDays day streak' : 'Start your streak',
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    hasStreak
+                        ? 'Keep going. Small daily progress creates strong results.'
+                        : 'Complete sessions regularly to build your learning habit.',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

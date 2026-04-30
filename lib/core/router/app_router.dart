@@ -118,14 +118,16 @@ GoRoute(
   name: 'notification-test',
   builder: (context, state) => const NotificationTestPage(),
 ),
-      GoRoute(
+GoRoute(
   path: '/session-success',
+  name: 'session-success',
   builder: (context, state) {
-    final data = state.extra as Map<String, dynamic>;
+    final extra = state.extra as Map<String, dynamic>? ?? {};
+
     return SessionSuccessPage(
-      durationMinutes: data['durationMinutes'] as int,
-      qualityScore: data['qualityScore'] as int,
-      streakDays: data['streakDays'] as int,
+      durationMinutes: extra['durationMinutes'] as int? ?? 0,
+      qualityScore: extra['qualityScore'] as int? ?? 0,
+      streakDays: extra['streakDays'] as int? ?? 0,
     );
   },
 ),

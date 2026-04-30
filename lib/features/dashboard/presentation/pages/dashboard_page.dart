@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mentorax/core/state/app_refresh_controller.dart';
+import 'package:mentorax/features/materials/presentation/providers/material_providers.dart';
 import 'package:mentorax/features/progress/presentation/providers/progress_providers.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
@@ -15,6 +16,7 @@ class DashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboardAsync = ref.watch(dashboardProvider);
     final progressAsync = ref.watch(progressSummaryProvider);
+    final materialsAsync = ref.watch(materialListProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -84,6 +86,60 @@ class DashboardPage extends ConsumerWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                const SizedBox(height: AppSpacing.lg),
+
+const Text(
+  'Recent Materials',
+  style: TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.bold,
+  ),
+),
+
+const SizedBox(height: AppSpacing.md),
+
+materialsAsync.when(
+  data: (materials) {
+    if (materials.isEmpty) {
+      return const _EmptyStateCard(
+        title: 'No materials yet',
+        subtitle: 'Create your first material to start learning.',
+        icon: Icons.menu_book_outlined,
+      );
+    }
+
+    final recentMaterials = materials.take(3).toList();
+
+    return Column(
+      children: recentMaterials.map((material) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: _RecentMaterialCard(
+            title: material.title,
+            materialType: material.materialType,
+            durationMinutes: material.estimatedDurationMinutes,
+            hasActivePlan: material.hasActivePlan,
+            onTap: () {
+              context.push('/materials/detail', extra: material.id);
+            },
+          ),
+        );
+      }).toList(),
+    );
+  },
+  loading: () => const Card(
+    child: Padding(
+      padding: EdgeInsets.all(AppSpacing.lg),
+      child: Center(child: CircularProgressIndicator()),
+    ),
+  ),
+  error: (error, _) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Text(error.toString()),
+    ),
+  ),
+),
                 const SizedBox(height: AppSpacing.md),
                 if (dashboard.nextSession == null)
                   const _EmptyStateCard(
@@ -482,6 +538,86 @@ class _EmptyStateCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecentMaterialCard extends StatelessWidget {
+  final String title;
+  final String materialType;
+  final int durationMinutes;
+  final bool hasActivePlan;
+  final VoidCallback onTap;
+
+  const _RecentMaterialCard({
+    required this.title,
+    required this.materialType,
+    required this.durationMinutes,
+    required this.hasActivePlan,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.menu_book_outlined,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      '$materialType • $durationMinutes min',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              if (hasActivePlan)
+                const Icon(
+                  Icons.check_circle_outline,
+                  color: AppColors.success,
+                )
+              else
+                const Icon(
+                  Icons.add_circle_outline,
+                  color: AppColors.textSecondary,
+                ),
+            ],
+          ),
         ),
       ),
     );

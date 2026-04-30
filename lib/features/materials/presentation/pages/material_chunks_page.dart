@@ -40,6 +40,7 @@ ref
     .refreshAfterChunkChanged(materialId);
   }
 
+  
 Future<void> _deleteChunk({
   required BuildContext context,
   required WidgetRef ref,
@@ -106,7 +107,10 @@ if (created == true) {
           if (chunks.isEmpty) {
             return RefreshIndicator(
               onRefresh: () async {
-                ref.invalidate(materialChunksProvider(materialId));
+               ref
+    .read(appRefreshControllerProvider)
+    .refreshAfterChunkChanged(materialId);
+    
                 await ref.read(materialChunksProvider(materialId).future);
               },
               child: ListView(
@@ -126,7 +130,7 @@ if (created == true) {
             child: ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.lg),
               itemCount: chunks.length,
-              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
+              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
               itemBuilder: (context, index) {
                 final chunk = chunks[index];
 

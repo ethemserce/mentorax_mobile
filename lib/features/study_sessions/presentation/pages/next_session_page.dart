@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mentorax/core/notifications/study_reminder_service.dart';
 import 'package:mentorax/core/state/app_refresh_controller.dart';
-import 'package:mentorax/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:mentorax/features/study_plans/presentation/providers/study_plan_providers.dart';
 import 'package:mentorax/features/study_sessions/presentation/providers/session_timer_providers.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';

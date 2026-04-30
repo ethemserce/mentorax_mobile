@@ -27,17 +27,18 @@ class MaterialModel {
 
   factory MaterialModel.fromJson(Map<String, dynamic> json) {
     return MaterialModel(
-      id: json['id'] as String,
-      userId: json['userId'] as String,
-      title: json['title'] as String,
-      materialType: json['materialType'] as String,
-      content: json['content'] as String,
-      estimatedDurationMinutes: json['estimatedDurationMinutes'] as int,
-      description: json['description'] as String?,
-      tags: json['tags'] as String?,
-      hasActivePlan: json['hasActivePlan'] as bool? ?? false,
-      activePlanId: json['activePlanId'] as String?,
-      activePlanTitle: json['activePlanTitle'] as String?,
+      id: json['id']?.toString() ?? '',
+      userId: json['userId']?.toString() ?? '',
+      title: json['title']?.toString() ?? 'Untitled Material',
+      materialType: json['materialType']?.toString() ?? 'Text',
+      content: json['content']?.toString() ?? '',
+      estimatedDurationMinutes:
+          (json['estimatedDurationMinutes'] as num?)?.toInt() ?? 0,
+      description: json['description']?.toString(),
+      tags: json['tags']?.toString(),
+      hasActivePlan: json['hasActivePlan'] == true,
+      activePlanId: json['activePlanId']?.toString(),
+      activePlanTitle: json['activePlanTitle']?.toString(),
     );
   }
 }

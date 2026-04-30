@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mentorax/core/state/app_refresh_controller.dart';
-import 'package:mentorax/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:mentorax/features/materials/presentation/providers/material_providers.dart';
 import 'package:mentorax/features/study_plans/data/models/study_plan_item_model.dart';
-import 'package:mentorax/features/study_sessions/presentation/providers/study_session_providers.dart';
 import 'package:mentorax/shared/widgets/app_confirm_dialog.dart';
 import 'package:mentorax/shared/widgets/app_snackbar.dart';
 
