@@ -11,6 +11,7 @@ class StudySessionDetailModel {
   final String? itemType;
   final int sequenceNumber;
   final DateTime scheduledAtUtc;
+  final DateTime? startedAtUtc;
   final int plannedDurationMinutes;
   final String status;
   final DateTime? completedAtUtc;
@@ -30,6 +31,7 @@ class StudySessionDetailModel {
     required this.itemType,
     required this.sequenceNumber,
     required this.scheduledAtUtc,
+    required this.startedAtUtc,
     required this.plannedDurationMinutes,
     required this.status,
     required this.completedAtUtc,
@@ -51,6 +53,9 @@ class StudySessionDetailModel {
       itemType: json['itemType'] as String?,
       sequenceNumber: json['sequenceNumber'] as int,
       scheduledAtUtc: _parseUtcDateTime(json['scheduledAtUtc'] as String),
+      startedAtUtc: json['startedAtUtc'] != null
+          ? _parseUtcDateTime(json['startedAtUtc'] as String)
+          : null,
       plannedDurationMinutes: json['plannedDurationMinutes'] as int,
       status: json['status'] as String,
       completedAtUtc: json['completedAtUtc'] != null
@@ -60,6 +65,8 @@ class StudySessionDetailModel {
       notes: json['notes'] as String?,
     );
   }
+
+  bool get isCompleted => completedAtUtc != null;
 }
 
 DateTime _parseUtcDateTime(String value) {

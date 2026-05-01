@@ -46,10 +46,24 @@ class DashboardRepository {
   }
 
   Future<NextSessionModel> startSession(String sessionId) async {
-    final session = await _service.startSession(sessionId);
-    await _local.cacheNextSession(session);
+    final localStarted = await _local.markSessionStartedLocally(sessionId);
 
-    return session;
+    if (localStarted != null) {
+      try {
+        final remoteStarted = await _service.startSession(sessionId);
+        await _local.cacheNextSession(remoteStarted);
+        await _local.markSessionStartSynced(sessionId);
+
+        return remoteStarted;
+      } catch (_) {
+        return localStarted;
+      }
+    }
+
+    final remoteStarted = await _service.startSession(sessionId);
+    await _local.cacheNextSession(remoteStarted);
+
+    return remoteStarted;
   }
 
   Future<void> completeSession({

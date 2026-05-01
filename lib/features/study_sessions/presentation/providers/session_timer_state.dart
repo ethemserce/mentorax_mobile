@@ -12,10 +12,10 @@ class SessionTimerState {
   });
 
   const SessionTimerState.initial()
-      : isRunning = false,
-        elapsedSeconds = 0,
-        sessionId = null,
-        materialTitle = null;
+    : isRunning = false,
+      elapsedSeconds = 0,
+      sessionId = null,
+      materialTitle = null;
 
   SessionTimerState copyWith({
     bool? isRunning,

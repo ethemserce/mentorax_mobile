@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mentorax/features/dashboard/data/models/next_session_model.dart';
+import 'package:mentorax/features/study_sessions/data/models/study_session_detail_model.dart';
 import 'package:mentorax/features/study_sessions/presentation/providers/study_session_providers.dart';
 
 import '../../../../core/constants/app_colors.dart';
@@ -27,6 +28,7 @@ class _StudyRoomPageState extends ConsumerState<StudyRoomPage>
   Timer? _timer;
   int _elapsedSeconds = 0;
   bool _isRunning = false;
+  bool _didRestoreTimer = false;
 
   int _confidenceScore = 3;
   bool _markImportant = false;
@@ -61,6 +63,31 @@ class _StudyRoomPageState extends ConsumerState<StudyRoomPage>
       setState(() {
         _elapsedSeconds++;
       });
+    });
+  }
+
+  void _restoreTimerFromSession(StudySessionDetailModel session) {
+    if (_didRestoreTimer ||
+        session.startedAtUtc == null ||
+        session.isCompleted) {
+      return;
+    }
+
+    _didRestoreTimer = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final elapsed = DateTime.now()
+          .toUtc()
+          .difference(session.startedAtUtc!)
+          .inSeconds;
+
+      setState(() {
+        _elapsedSeconds = elapsed < 0 ? 0 : elapsed;
+      });
+
+      _startTimer();
     });
   }
 
@@ -154,6 +181,8 @@ class _StudyRoomPageState extends ConsumerState<StudyRoomPage>
       appBar: AppBar(title: const Text('Study Room')),
       body: sessionAsync.when(
         data: (session) {
+          _restoreTimerFromSession(session);
+
           final progress = _progressValue(session.plannedDurationMinutes);
 
           return SafeArea(
@@ -278,7 +307,7 @@ class _StudyRoomPageState extends ConsumerState<StudyRoomPage>
                               materialId: session.learningMaterialId,
                               materialTitle: session.materialTitle,
                               scheduledAtUtc: session.scheduledAtUtc,
-                              startedAtUtc: null,
+                              startedAtUtc: session.startedAtUtc,
                               estimatedMinutes: session.plannedDurationMinutes,
                               isDue: session.scheduledAtUtc.toLocal().isBefore(
                                 DateTime.now(),

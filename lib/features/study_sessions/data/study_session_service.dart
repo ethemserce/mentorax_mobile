@@ -19,7 +19,7 @@ class StudySessionService {
     }
   }
 
-ApiException _mapDioException(DioException e) {
-  return ApiException.fromDioException(e);
-}
+  ApiException _mapDioException(DioException e) {
+    return ApiException.fromDioException(e);
+  }
 }

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:mentorax/core/database/app_database.dart';
 
@@ -27,6 +29,74 @@ class DashboardLocalDataSource {
           ),
           mode: InsertMode.insertOrReplace,
         );
+  }
+
+  Future<NextSessionModel?> markSessionStartedLocally(
+    String sessionId, {
+    DateTime? startedAtUtc,
+  }) async {
+    final existing = await (_database.select(
+      _database.localStudySessions,
+    )..where((row) => row.id.equals(sessionId))).getSingleOrNull();
+
+    if (existing == null) return null;
+
+    final startedAt = startedAtUtc ?? DateTime.now().toUtc();
+
+    await (_database.update(
+      _database.localStudySessions,
+    )..where((row) => row.id.equals(sessionId))).write(
+      LocalStudySessionsCompanion(
+        startedAtUtc: Value(startedAt),
+        status: const Value('InProgress'),
+        syncStatus: const Value('pending'),
+        updatedAtUtc: Value(DateTime.now().toUtc()),
+      ),
+    );
+
+    await _database
+        .into(_database.syncOutbox)
+        .insert(
+          SyncOutboxCompanion.insert(
+            id: 'start-session-$sessionId',
+            operationType: 'StudySessionStarted',
+            entityType: 'StudySession',
+            entityId: sessionId,
+            payload: jsonEncode({
+              'sessionId': sessionId,
+              'startedAtUtc': startedAt.toIso8601String(),
+            }),
+            createdAtUtc: startedAt,
+            updatedAtUtc: Value(DateTime.now().toUtc()),
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+
+    final updated = await (_database.select(
+      _database.localStudySessions,
+    )..where((row) => row.id.equals(sessionId))).getSingle();
+
+    return _toNextSessionModel(updated);
+  }
+
+  Future<void> markSessionStartSynced(String sessionId) async {
+    await (_database.update(
+      _database.localStudySessions,
+    )..where((row) => row.id.equals(sessionId))).write(
+      LocalStudySessionsCompanion(
+        syncStatus: const Value('synced'),
+        updatedAtUtc: Value(DateTime.now().toUtc()),
+      ),
+    );
+
+    await (_database.update(
+      _database.syncOutbox,
+    )..where((row) => row.id.equals('start-session-$sessionId'))).write(
+      SyncOutboxCompanion(
+        status: const Value('synced'),
+        updatedAtUtc: Value(DateTime.now().toUtc()),
+      ),
+    );
   }
 
   Future<NextSessionModel?> getNextSession() async {

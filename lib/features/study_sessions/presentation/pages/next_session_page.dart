@@ -18,25 +18,22 @@ class NextSessionPage extends ConsumerWidget {
     final nextSessionAsync = ref.watch(nextSessionProvider);
 
     return Scaffold(
-  appBar: AppBar(
-    title: const Text('Next Session'),
-    leading: IconButton(
-      icon: const Icon(Icons.arrow_back),
-      onPressed: () {
-        context.go('/dashboard');
-      },
-    ),
-  ),
+      appBar: AppBar(
+        title: const Text('Next Session'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            context.go('/dashboard');
+          },
+        ),
+      ),
       body: nextSessionAsync.when(
         data: (session) => _NextSessionView(session: session),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Text(
-              error.toString(),
-              textAlign: TextAlign.center,
-            ),
+            child: Text(error.toString(), textAlign: TextAlign.center),
           ),
         ),
       ),
@@ -56,45 +53,54 @@ class _NextSessionView extends ConsumerStatefulWidget {
 class _NextSessionViewState extends ConsumerState<_NextSessionView> {
   bool _isStarting = false;
 
-Future<void> _startSession() async {
-  setState(() {
-    _isStarting = true;
-  });
+  Future<void> _startSession() async {
+    if (widget.session.startedAtUtc != null) {
+      context.push('/study-room', extra: widget.session.sessionId);
+      return;
+    }
 
-  try {
-    final started = await ref
-        .read(sessionDashboardRepositoryProvider)
-        .startSession(widget.session.sessionId);
+    setState(() {
+      _isStarting = true;
+    });
 
-    await StudyReminderService.instance.cancelForSession(started.sessionId);
+    try {
+      final started = await ref
+          .read(sessionDashboardRepositoryProvider)
+          .startSession(widget.session.sessionId);
 
-    ref.read(sessionTimerProvider.notifier).start(
-          sessionId: started.sessionId,
-          materialTitle: started.materialTitle,
-        );
+      await StudyReminderService.instance.cancelForSession(started.sessionId);
 
-    // REFRESH
-ref.read(appRefreshControllerProvider).refreshAfterSessionStarted(
-      materialId: started.materialId,
-      planId: started.studyPlanId,
-    );
+      ref
+          .read(sessionTimerProvider.notifier)
+          .start(
+            sessionId: started.sessionId,
+            materialTitle: started.materialTitle,
+          );
 
-    if (!mounted) return;
-    context.push('/study-room', extra: started.sessionId);
-  } catch (e) {
-    if (!mounted) return;
+      // REFRESH
+      ref
+          .read(appRefreshControllerProvider)
+          .refreshAfterSessionStarted(
+            materialId: started.materialId,
+            planId: started.studyPlanId,
+          );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(e.toString())),
-    );
-  } finally {
-    if (mounted) {
-      setState(() {
-        _isStarting = false;
-      });
+      if (!mounted) return;
+      context.push('/study-room', extra: started.sessionId);
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isStarting = false;
+        });
+      }
     }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -118,10 +124,7 @@ ref.read(appRefreshControllerProvider).refreshAfterSessionStarted(
             children: [
               const Text(
                 'Your next learning step',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: Colors.white70, fontSize: 14),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
@@ -184,7 +187,9 @@ ref.read(appRefreshControllerProvider).refreshAfterSessionStarted(
         ),
         const SizedBox(height: AppSpacing.xl),
         AppPrimaryButton(
-          text: 'Start Session',
+          text: session.startedAtUtc == null
+              ? 'Start Session'
+              : 'Continue Session',
           onPressed: _startSession,
           isLoading: _isStarting,
         ),
@@ -197,10 +202,7 @@ class _SessionInfoChip extends StatelessWidget {
   final IconData icon;
   final String label;
 
-  const _SessionInfoChip({
-    required this.icon,
-    required this.label,
-  });
+  const _SessionInfoChip({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -218,10 +220,7 @@ class _SessionInfoChip extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: Colors.white),
           const SizedBox(width: AppSpacing.xs),
-          Text(
-            label,
-            style: const TextStyle(color: Colors.white),
-          ),
+          Text(label, style: const TextStyle(color: Colors.white)),
         ],
       ),
     );
@@ -249,7 +248,10 @@ class _DetailRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(color: AppColors.textSecondary)),
+              Text(
+                title,
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
               const SizedBox(height: AppSpacing.xs),
               Text(
                 value,

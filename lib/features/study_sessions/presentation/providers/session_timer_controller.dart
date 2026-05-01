@@ -7,10 +7,7 @@ class SessionTimerController extends StateNotifier<SessionTimerState> {
 
   SessionTimerController() : super(const SessionTimerState.initial());
 
-  void start({
-    required String sessionId,
-    required String materialTitle,
-  }) {
+  void start({required String sessionId, required String materialTitle}) {
     _timer?.cancel();
 
     state = SessionTimerState(
@@ -21,9 +18,7 @@ class SessionTimerController extends StateNotifier<SessionTimerState> {
     );
 
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      state = state.copyWith(
-        elapsedSeconds: state.elapsedSeconds + 1,
-      );
+      state = state.copyWith(elapsedSeconds: state.elapsedSeconds + 1);
     });
   }
 

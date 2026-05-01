@@ -4,5 +4,5 @@ import 'session_timer_state.dart';
 
 final sessionTimerProvider =
     StateNotifierProvider<SessionTimerController, SessionTimerState>((ref) {
-  return SessionTimerController();
-});
+      return SessionTimerController();
+    });

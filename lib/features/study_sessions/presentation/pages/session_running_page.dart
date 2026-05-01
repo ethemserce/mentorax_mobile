@@ -11,10 +11,7 @@ import '../providers/session_timer_providers.dart';
 class SessionRunningPage extends ConsumerWidget {
   final NextSessionModel session;
 
-  const SessionRunningPage({
-    super.key,
-    required this.session,
-  });
+  const SessionRunningPage({super.key, required this.session});
 
   String _formatDuration(int totalSeconds) {
     final minutes = totalSeconds ~/ 60;
@@ -27,21 +24,18 @@ class SessionRunningPage extends ConsumerWidget {
     final timerState = ref.watch(sessionTimerProvider);
     final progress = session.estimatedMinutes == 0
         ? 0.0
-        : min(
-            timerState.elapsedSeconds / (session.estimatedMinutes * 60),
-            1.0,
-          );
+        : min(timerState.elapsedSeconds / (session.estimatedMinutes * 60), 1.0);
 
     return Scaffold(
-appBar: AppBar(
-  title: const Text('Session Running'),
-  leading: IconButton(
-    icon: const Icon(Icons.arrow_back),
-    onPressed: () {
-      context.go('/dashboard');
-    },
-  ),
-),
+      appBar: AppBar(
+        title: const Text('Session Running'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            context.go('/dashboard');
+          },
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
@@ -55,9 +49,7 @@ appBar: AppBar(
                   children: [
                     const Text(
                       'Focus on your material',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                      ),
+                      style: TextStyle(color: AppColors.textSecondary),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
@@ -92,9 +84,7 @@ appBar: AppBar(
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       'Estimated: ${session.estimatedMinutes} min',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                      ),
+                      style: const TextStyle(color: AppColors.textSecondary),
                     ),
                   ],
                 ),
