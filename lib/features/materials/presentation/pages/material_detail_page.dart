@@ -116,12 +116,13 @@ class MaterialDetailPage extends ConsumerWidget {
                           );
 
                           if (created == true) {
-                            ref.invalidate(materialDetailProvider(materialId));
-                            ref.invalidate(materialListProvider);
+  ref.invalidate(materialDetailProvider(materialId));
+  ref.invalidate(materialListProvider);
+  ref.invalidate(materialChunksProvider(materialId));
                             ref
                                 .read(appRefreshControllerProvider)
                                 .refreshAfterPlanCreated();
-
+  await ref.read(materialDetailProvider(materialId).future);
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
