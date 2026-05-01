@@ -88,6 +88,43 @@ void main() {
     expect(localSession.syncStatus, 'pending');
   });
 
+  test('marks terminal conflicts without scheduling retries', () async {
+    final session = _session();
+    await dashboardLocal.cacheNextSession(session);
+    await dashboardLocal.markSessionStartedLocally(
+      session.sessionId,
+      startedAtUtc: DateTime.utc(2026, 5, 1, 9),
+    );
+
+    final service = _FakeSyncService(
+      response: (operations) => _response(
+        operations,
+        statusFor: (_) => 'conflict',
+        errorFor: (_) => 'study_plan_not_active: Plan is not active.',
+      ),
+    );
+    final repository = SyncRepository(database: database, service: service);
+
+    final result = await repository.pushPendingOperations();
+
+    final outboxOperation = await database
+        .select(database.syncOutbox)
+        .getSingle();
+    final localSession = await database
+        .select(database.localStudySessions)
+        .getSingle();
+
+    expect(result.attemptedCount, 1);
+    expect(result.syncedCount, 0);
+    expect(result.retryCount, 0);
+    expect(result.conflictCount, 1);
+    expect(outboxOperation.status, 'conflict');
+    expect(outboxOperation.retryCount, 0);
+    expect(outboxOperation.lastError, contains('study_plan_not_active'));
+    expect(outboxOperation.nextAttemptAtUtc, isNull);
+    expect(localSession.syncStatus, 'conflict');
+  });
+
   test(
     'does not mark a session synced while another operation is pending',
     () async {
@@ -211,6 +248,52 @@ void main() {
     expect(plans, isEmpty);
     expect(outboxOperation.status, 'pending');
     expect(outboxOperation.lastError, 'backend rejected operation');
+  });
+
+  test('terminal conflicts do not block delta pull reconciliation', () async {
+    final session = _session();
+    await dashboardLocal.cacheNextSession(session);
+    await dashboardLocal.markSessionStartedLocally(
+      session.sessionId,
+      startedAtUtc: DateTime.utc(2026, 5, 1, 9),
+    );
+
+    final stateStorage = _FakeSyncStateStorage(
+      lastSyncAt: DateTime.utc(2026, 5, 1, 9),
+    );
+    final service = _FakeSyncService(
+      response: (operations) => _response(
+        operations,
+        statusFor: (_) => 'conflict',
+        errorFor: (_) => 'study_plan_not_active: Plan is not active.',
+      ),
+      changesResponse: _changes(planTitle: 'Server Reconciled Plan'),
+    );
+    final repository = SyncRepository(
+      database: database,
+      service: service,
+      stateStorage: stateStorage,
+      studyPlanLocal: StudyPlanLocalDataSource(database),
+      dashboardLocal: dashboardLocal,
+    );
+
+    final result = await repository.synchronize();
+
+    final outboxOperation = await database
+        .select(database.syncOutbox)
+        .getSingle();
+    final plans = await database.select(database.localStudyPlans).get();
+    final localSession = await database
+        .select(database.localStudySessions)
+        .getSingle();
+
+    expect(result.conflictCount, 1);
+    expect(result.retryCount, 0);
+    expect(service.changesCalled, isTrue);
+    expect(outboxOperation.status, 'conflict');
+    expect(plans.single.title, 'Server Reconciled Plan');
+    expect(localSession.syncStatus, 'synced');
+    expect(stateStorage.lastSyncAt, DateTime.utc(2026, 5, 1, 11));
   });
 
   test('applies delta changes when last sync state exists', () async {

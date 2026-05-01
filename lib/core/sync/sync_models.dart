@@ -120,17 +120,20 @@ class SyncRunResult {
   final int attemptedCount;
   final int syncedCount;
   final int retryCount;
+  final int conflictCount;
 
   const SyncRunResult({
     required this.attemptedCount,
     required this.syncedCount,
     required this.retryCount,
+    this.conflictCount = 0,
   });
 
   static const empty = SyncRunResult(
     attemptedCount: 0,
     syncedCount: 0,
     retryCount: 0,
+    conflictCount: 0,
   );
 }
 

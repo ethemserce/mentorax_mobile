@@ -11,10 +11,22 @@ import 'sync_state_storage.dart';
 class SyncRepository {
   static const _pendingStatus = 'pending';
   static const _syncedStatus = 'synced';
+  static const _conflictStatus = 'conflict';
   static const _successfulRemoteStatuses = {
     'applied',
     'already_applied',
     'synced',
+  };
+  static const _terminalRemoteStatuses = {'conflict', 'rejected', 'invalid'};
+  static const _terminalErrorCodes = {
+    'study_session_not_found',
+    'session_plan_not_found',
+    'study_plan_not_active',
+    'sync_invalid_payload',
+    'sync_session_id_required',
+    'sync_payload_field_required',
+    'sync_payload_field_invalid',
+    'sync_operation_not_supported',
   };
 
   final AppDatabase _database;
@@ -190,6 +202,7 @@ class SyncRepository {
 
     var syncedCount = 0;
     var retryCount = 0;
+    var conflictCount = 0;
 
     for (final operation in operations) {
       final result = resultByOperationId[operation.id];
@@ -209,6 +222,15 @@ class SyncRepository {
         continue;
       }
 
+      if (_isTerminalConflict(result)) {
+        await _markOperationConflict(
+          operation,
+          result.error ?? 'sync_operation_conflict: ${result.status}',
+        );
+        conflictCount += 1;
+        continue;
+      }
+
       await _markOperationForRetry(
         operation,
         result.error ?? 'sync_operation_failed: ${result.status}',
@@ -220,6 +242,7 @@ class SyncRepository {
       attemptedCount: operations.length,
       syncedCount: syncedCount,
       retryCount: retryCount,
+      conflictCount: conflictCount,
     );
   }
 
@@ -284,6 +307,37 @@ class SyncRepository {
     );
   }
 
+  Future<void> _markOperationConflict(
+    SyncOutboxData operation,
+    String error,
+  ) async {
+    final now = DateTime.now().toUtc();
+
+    await _database.transaction(() async {
+      await (_database.update(
+        _database.syncOutbox,
+      )..where((row) => row.id.equals(operation.id))).write(
+        SyncOutboxCompanion(
+          status: const Value(_conflictStatus),
+          lastError: Value(_trimError(error)),
+          nextAttemptAtUtc: const Value(null),
+          updatedAtUtc: Value(now),
+        ),
+      );
+
+      if (operation.entityType == 'StudySession') {
+        await (_database.update(
+          _database.localStudySessions,
+        )..where((row) => row.id.equals(operation.entityId))).write(
+          LocalStudySessionsCompanion(
+            syncStatus: const Value(_conflictStatus),
+            updatedAtUtc: Value(now),
+          ),
+        );
+      }
+    });
+  }
+
   Duration _retryDelay(int retryCount) {
     final minutes = retryCount <= 1
         ? 1
@@ -299,5 +353,15 @@ class SyncRepository {
 
     if (error.length <= maxLength) return error;
     return error.substring(0, maxLength);
+  }
+
+  bool _isTerminalConflict(SyncPushOperationResult result) {
+    if (_terminalRemoteStatuses.contains(result.status)) return true;
+
+    if (result.status != 'failed' || result.error == null) return false;
+
+    return _terminalErrorCodes.any(
+      (code) => result.error!.startsWith('$code:'),
+    );
   }
 }
