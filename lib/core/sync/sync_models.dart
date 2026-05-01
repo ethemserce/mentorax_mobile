@@ -33,6 +33,50 @@ class SyncBootstrapModel {
   }
 }
 
+class SyncChangesModel {
+  final DateTime serverTimeUtc;
+  final List<SyncChangeModel> changes;
+
+  SyncChangesModel({required this.serverTimeUtc, required this.changes});
+
+  factory SyncChangesModel.fromJson(Map<String, dynamic> json) {
+    return SyncChangesModel(
+      serverTimeUtc: _parseUtcDateTime(json['serverTimeUtc'] as String),
+      changes: ((json['changes'] as List?) ?? [])
+          .map((item) => SyncChangeModel.fromJson(item as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+class SyncChangeModel {
+  final String entityType;
+  final String entityId;
+  final String changeType;
+  final DateTime changedAtUtc;
+  final Map<String, dynamic>? payload;
+
+  SyncChangeModel({
+    required this.entityType,
+    required this.entityId,
+    required this.changeType,
+    required this.changedAtUtc,
+    required this.payload,
+  });
+
+  factory SyncChangeModel.fromJson(Map<String, dynamic> json) {
+    final payload = json['payload'];
+
+    return SyncChangeModel(
+      entityType: json['entityType'] as String,
+      entityId: json['entityId'] as String,
+      changeType: json['changeType'] as String,
+      changedAtUtc: _parseUtcDateTime(json['changedAtUtc'] as String),
+      payload: payload is Map ? Map<String, dynamic>.from(payload) : null,
+    );
+  }
+}
+
 class SyncPushResponse {
   final DateTime serverTimeUtc;
   final List<SyncPushOperationResult> results;

@@ -5,9 +5,14 @@ import 'package:mentorax/features/study_plans/data/study_plan_local_data_source.
 
 import 'sync_repository.dart';
 import 'sync_service.dart';
+import 'sync_state_storage.dart';
 
 final syncServiceProvider = Provider<SyncService>((ref) {
   return SyncService();
+});
+
+final syncStateStorageProvider = Provider<SyncStateStorage>((ref) {
+  return SecureSyncStateStorage();
 });
 
 final syncRepositoryProvider = Provider<SyncRepository>((ref) {
@@ -16,6 +21,7 @@ final syncRepositoryProvider = Provider<SyncRepository>((ref) {
   return SyncRepository(
     database: database,
     service: ref.read(syncServiceProvider),
+    stateStorage: ref.read(syncStateStorageProvider),
     studyPlanLocal: StudyPlanLocalDataSource(database),
     dashboardLocal: DashboardLocalDataSource(database),
   );

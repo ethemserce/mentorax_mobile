@@ -21,7 +21,7 @@ class SyncService {
     }
   }
 
-  Future<Map<String, dynamic>> changes({DateTime? since}) async {
+  Future<SyncChangesModel> changes({DateTime? since}) async {
     try {
       final response = await _dio.get(
         '/api/sync/changes',
@@ -30,7 +30,7 @@ class SyncService {
         },
       );
 
-      return response.data as Map<String, dynamic>;
+      return SyncChangesModel.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (error) {
       throw ApiException.fromDioException(error);
     }

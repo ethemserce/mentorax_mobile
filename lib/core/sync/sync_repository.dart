@@ -2,9 +2,11 @@ import 'package:drift/drift.dart';
 import 'package:mentorax/core/database/app_database.dart';
 import 'package:mentorax/features/dashboard/data/dashboard_local_data_source.dart';
 import 'package:mentorax/features/study_plans/data/study_plan_local_data_source.dart';
+import 'package:mentorax/features/study_plans/data/models/study_plan_model.dart';
 
 import 'sync_models.dart';
 import 'sync_service.dart';
+import 'sync_state_storage.dart';
 
 class SyncRepository {
   static const _pendingStatus = 'pending';
@@ -17,6 +19,7 @@ class SyncRepository {
 
   final AppDatabase _database;
   final SyncService _service;
+  final SyncStateStorage? _stateStorage;
   final StudyPlanLocalDataSource? _studyPlanLocal;
   final DashboardLocalDataSource? _dashboardLocal;
 
@@ -25,10 +28,12 @@ class SyncRepository {
   SyncRepository({
     required AppDatabase database,
     required SyncService service,
+    SyncStateStorage? stateStorage,
     StudyPlanLocalDataSource? studyPlanLocal,
     DashboardLocalDataSource? dashboardLocal,
   }) : _database = database,
        _service = service,
+       _stateStorage = stateStorage,
        _studyPlanLocal = studyPlanLocal,
        _dashboardLocal = dashboardLocal;
 
@@ -52,8 +57,8 @@ class SyncRepository {
     try {
       final pushResult = await _pushPendingOperations();
 
-      if (pushResult.retryCount == 0) {
-        await _bootstrapFromServer();
+      if (!await _hasPendingOperations()) {
+        await _pullServerChanges();
       }
 
       return pushResult;
@@ -68,7 +73,8 @@ class SyncRepository {
     _isSyncing = true;
 
     try {
-      await _bootstrapFromServer();
+      final bootstrap = await _bootstrapFromServer();
+      await _stateStorage?.saveLastSyncAt(bootstrap.serverTimeUtc);
     } finally {
       _isSyncing = false;
     }
@@ -96,7 +102,26 @@ class SyncRepository {
     }
   }
 
-  Future<void> _bootstrapFromServer() async {
+  Future<void> _pullServerChanges() async {
+    final lastSyncAt = await _stateStorage?.getLastSyncAt();
+
+    if (lastSyncAt == null) {
+      final bootstrap = await _bootstrapFromServer();
+      await _stateStorage?.saveLastSyncAt(bootstrap.serverTimeUtc);
+      return;
+    }
+
+    try {
+      final changes = await _service.changes(since: lastSyncAt);
+      await _applyChanges(changes);
+      await _stateStorage?.saveLastSyncAt(changes.serverTimeUtc);
+    } catch (_) {
+      final bootstrap = await _bootstrapFromServer();
+      await _stateStorage?.saveLastSyncAt(bootstrap.serverTimeUtc);
+    }
+  }
+
+  Future<SyncBootstrapModel> _bootstrapFromServer() async {
     final bootstrap = await _service.bootstrap();
 
     final nextSession =
@@ -106,6 +131,29 @@ class SyncRepository {
     }
 
     await _studyPlanLocal?.cachePlans(bootstrap.studyPlans);
+
+    return bootstrap;
+  }
+
+  Future<void> _applyChanges(SyncChangesModel changes) async {
+    final plans = <StudyPlanModel>[];
+
+    for (final change in changes.changes) {
+      if (change.entityType == 'StudyPlan' &&
+          change.changeType == 'Upsert' &&
+          change.payload != null) {
+        plans.add(StudyPlanModel.fromJson(change.payload!));
+        continue;
+      }
+
+      throw UnsupportedError(
+        'Unsupported sync change: ${change.entityType}/${change.changeType}',
+      );
+    }
+
+    if (plans.isNotEmpty) {
+      await _studyPlanLocal?.cachePlans(plans);
+    }
   }
 
   Future<List<SyncOutboxData>> _pendingOperations(DateTime now) async {
@@ -122,6 +170,14 @@ class SyncRepository {
               !operation.nextAttemptAtUtc!.isAfter(now),
         )
         .toList();
+  }
+
+  Future<bool> _hasPendingOperations() async {
+    final rows = await (_database.select(
+      _database.syncOutbox,
+    )..where((row) => row.status.equals(_pendingStatus))).get();
+
+    return rows.isNotEmpty;
   }
 
   Future<SyncRunResult> _applyPushResponse(

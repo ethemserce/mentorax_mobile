@@ -4,6 +4,7 @@ import 'package:mentorax/core/database/app_database.dart';
 import 'package:mentorax/core/sync/sync_models.dart';
 import 'package:mentorax/core/sync/sync_repository.dart';
 import 'package:mentorax/core/sync/sync_service.dart';
+import 'package:mentorax/core/sync/sync_state_storage.dart';
 import 'package:mentorax/features/dashboard/data/dashboard_local_data_source.dart';
 import 'package:mentorax/features/dashboard/data/models/next_session_model.dart';
 import 'package:mentorax/features/study_plans/data/study_plan_local_data_source.dart';
@@ -211,6 +212,64 @@ void main() {
     expect(outboxOperation.status, 'pending');
     expect(outboxOperation.lastError, 'backend rejected operation');
   });
+
+  test('applies delta changes when last sync state exists', () async {
+    final stateStorage = _FakeSyncStateStorage(
+      lastSyncAt: DateTime.utc(2026, 5, 1, 9),
+    );
+    final service = _FakeSyncService(
+      response: (operations) =>
+          _response(operations, statusFor: (_) => 'applied'),
+      changesResponse: _changes(planTitle: 'Delta Plan'),
+    );
+    final repository = SyncRepository(
+      database: database,
+      service: service,
+      stateStorage: stateStorage,
+      studyPlanLocal: StudyPlanLocalDataSource(database),
+      dashboardLocal: dashboardLocal,
+    );
+
+    await repository.synchronize();
+
+    final plans = await database.select(database.localStudyPlans).get();
+
+    expect(service.changesCalled, isTrue);
+    expect(service.changesSince, DateTime.utc(2026, 5, 1, 9));
+    expect(service.bootstrapCalled, isFalse);
+    expect(plans, hasLength(1));
+    expect(plans.single.title, 'Delta Plan');
+    expect(stateStorage.lastSyncAt, DateTime.utc(2026, 5, 1, 11));
+  });
+
+  test('falls back to bootstrap when delta pull fails', () async {
+    final stateStorage = _FakeSyncStateStorage(
+      lastSyncAt: DateTime.utc(2026, 5, 1, 9),
+    );
+    final service = _FakeSyncService(
+      response: (operations) =>
+          _response(operations, statusFor: (_) => 'applied'),
+      bootstrapResponse: _bootstrap(planTitle: 'Bootstrap Fallback Plan'),
+      throwOnChanges: true,
+    );
+    final repository = SyncRepository(
+      database: database,
+      service: service,
+      stateStorage: stateStorage,
+      studyPlanLocal: StudyPlanLocalDataSource(database),
+      dashboardLocal: dashboardLocal,
+    );
+
+    await repository.synchronize();
+
+    final plans = await database.select(database.localStudyPlans).get();
+
+    expect(service.changesCalled, isTrue);
+    expect(service.bootstrapCalled, isTrue);
+    expect(plans, hasLength(1));
+    expect(plans.single.title, 'Bootstrap Fallback Plan');
+    expect(stateStorage.lastSyncAt, DateTime.utc(2026, 5, 1, 10));
+  });
 }
 
 NextSessionModel _session() {
@@ -245,39 +304,25 @@ SyncPushResponse _response(
   );
 }
 
-SyncBootstrapModel _bootstrap() {
-  return SyncBootstrapModel.fromJson({
-    'serverTimeUtc': '2026-05-01T10:00:00Z',
-    'studyPlans': [
+SyncChangesModel _changes({String planTitle = 'Delta Plan'}) {
+  return SyncChangesModel.fromJson({
+    'serverTimeUtc': '2026-05-01T11:00:00Z',
+    'changes': [
       {
-        'id': 'plan-1',
-        'userId': 'user-1',
-        'learningMaterialId': 'material-1',
-        'title': 'Server Plan',
-        'startDate': '2026-05-01',
-        'dailyTargetMinutes': 25,
-        'status': 'Active',
-        'sessions': const [],
-        'items': [
-          {
-            'id': 'item-1',
-            'studyPlanId': 'plan-1',
-            'materialChunkId': null,
-            'title': 'Server Item',
-            'description': null,
-            'itemType': 'Study',
-            'orderNo': 1,
-            'plannedDateUtc': '2026-05-01T08:55:00Z',
-            'plannedStartTime': null,
-            'plannedEndTime': null,
-            'durationMinutes': 25,
-            'status': 'Pending',
-            'materialChunk': null,
-            'sessions': [_sessionJson()],
-          },
-        ],
+        'entityType': 'StudyPlan',
+        'entityId': 'plan-1',
+        'changeType': 'Upsert',
+        'changedAtUtc': '2026-05-01T10:30:00Z',
+        'payload': _planJson(title: planTitle),
       },
     ],
+  });
+}
+
+SyncBootstrapModel _bootstrap({String planTitle = 'Server Plan'}) {
+  return SyncBootstrapModel.fromJson({
+    'serverTimeUtc': '2026-05-01T10:00:00Z',
+    'studyPlans': [_planJson(title: planTitle)],
     'dashboard': {
       'dueCount': 1,
       'todayPlannedMinutes': 25,
@@ -289,7 +334,38 @@ SyncBootstrapModel _bootstrap() {
   });
 }
 
-Map<String, Object?> _sessionJson() {
+Map<String, dynamic> _planJson({required String title}) {
+  return {
+    'id': 'plan-1',
+    'userId': 'user-1',
+    'learningMaterialId': 'material-1',
+    'title': title,
+    'startDate': '2026-05-01',
+    'dailyTargetMinutes': 25,
+    'status': 'Active',
+    'sessions': const [],
+    'items': [
+      {
+        'id': 'item-1',
+        'studyPlanId': 'plan-1',
+        'materialChunkId': null,
+        'title': 'Server Item',
+        'description': null,
+        'itemType': 'Study',
+        'orderNo': 1,
+        'plannedDateUtc': '2026-05-01T08:55:00Z',
+        'plannedStartTime': null,
+        'plannedEndTime': null,
+        'durationMinutes': 25,
+        'status': 'Pending',
+        'materialChunk': null,
+        'sessions': [_sessionJson()],
+      },
+    ],
+  };
+}
+
+Map<String, dynamic> _sessionJson() {
   return {
     'id': 'session-1',
     'studyPlanId': 'plan-1',
@@ -306,7 +382,7 @@ Map<String, Object?> _sessionJson() {
   };
 }
 
-Map<String, Object?> _nextSessionJson() {
+Map<String, dynamic> _nextSessionJson() {
   return {
     'sessionId': 'session-1',
     'studyPlanId': 'plan-1',
@@ -322,10 +398,19 @@ Map<String, Object?> _nextSessionJson() {
 class _FakeSyncService extends SyncService {
   final SyncPushResponse Function(List<SyncOutboxData> operations) response;
   final SyncBootstrapModel? bootstrapResponse;
+  final SyncChangesModel? changesResponse;
+  final bool throwOnChanges;
   List<SyncOutboxData> operations = const [];
   bool bootstrapCalled = false;
+  bool changesCalled = false;
+  DateTime? changesSince;
 
-  _FakeSyncService({required this.response, this.bootstrapResponse});
+  _FakeSyncService({
+    required this.response,
+    this.bootstrapResponse,
+    this.changesResponse,
+    this.throwOnChanges = false,
+  });
 
   @override
   Future<SyncPushResponse> pushOperations(
@@ -340,6 +425,18 @@ class _FakeSyncService extends SyncService {
     bootstrapCalled = true;
     return bootstrapResponse ?? _bootstrap();
   }
+
+  @override
+  Future<SyncChangesModel> changes({DateTime? since}) async {
+    changesCalled = true;
+    changesSince = since;
+
+    if (throwOnChanges) {
+      throw Exception('delta unavailable');
+    }
+
+    return changesResponse ?? _changes();
+  }
 }
 
 class _ThrowingSyncService extends SyncService {
@@ -348,5 +445,26 @@ class _ThrowingSyncService extends SyncService {
     List<SyncOutboxData> operations,
   ) async {
     throw Exception('network unavailable');
+  }
+}
+
+class _FakeSyncStateStorage implements SyncStateStorage {
+  DateTime? lastSyncAt;
+
+  _FakeSyncStateStorage({this.lastSyncAt});
+
+  @override
+  Future<void> clearLastSyncAt() async {
+    lastSyncAt = null;
+  }
+
+  @override
+  Future<DateTime?> getLastSyncAt() async {
+    return lastSyncAt;
+  }
+
+  @override
+  Future<void> saveLastSyncAt(DateTime value) async {
+    lastSyncAt = value.toUtc();
   }
 }
