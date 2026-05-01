@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mentorax/core/state/app_refresh_controller.dart';
+import 'package:mentorax/core/sync/sync_providers.dart';
+import 'package:mentorax/core/sync/widgets/sync_status_card.dart';
 import 'package:mentorax/features/auth/presentation/providers/auth_providers.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -13,11 +16,17 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
+    final syncStatusAsync = ref.watch(syncStatusProvider);
+
+    Future<void> syncNow() async {
+      await ref.read(syncRepositoryProvider).synchronize();
+      ref.invalidate(syncStatusProvider);
+      ref.read(appRefreshControllerProvider).refreshStudyFlow();
+      await ref.read(syncStatusProvider.future);
+    }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
@@ -92,6 +101,32 @@ class SettingsPage extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           const Text(
+            'Sync',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          syncStatusAsync.when(
+            data: (status) =>
+                SyncStatusCard(status: status, onSyncNow: syncNow),
+            loading: () => const Card(
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.lg),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ),
+            error: (error, _) => Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Text(error.toString()),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          const Text(
             'Application',
             style: TextStyle(
               fontSize: 18,
@@ -100,40 +135,40 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.notifications_active_outlined),
-                title: const Text('Notification Test'),
-                subtitle: const Text('Test instant and scheduled reminders'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  context.push('/settings/notification-test');
-                },
-              ),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.notifications_active_outlined),
+              title: const Text('Notification Test'),
+              subtitle: const Text('Test instant and scheduled reminders'),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () {
+                context.push('/settings/notification-test');
+              },
             ),
-            const SizedBox(height: AppSpacing.md),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.notifications_outlined),
-                  title: const Text('Register Push Token'),
-                  subtitle: const Text('Send device token to backend'),
-                  onTap: () async {
-                    // bunu bir sonraki adımda service/provider ile bağlayacağız
-                  },
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Card(
-              child: ListTile(
-                leading: const Icon(Icons.bug_report_outlined),
-                title: const Text('Reminder Debug'),
-                subtitle: const Text('See last scheduled reminder'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  context.push('/settings/reminder-debug');
-                },
-              ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.notifications_outlined),
+              title: const Text('Register Push Token'),
+              subtitle: const Text('Send device token to backend'),
+              onTap: () async {
+                // bunu bir sonraki adımda service/provider ile bağlayacağız
+              },
             ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.bug_report_outlined),
+              title: const Text('Reminder Debug'),
+              subtitle: const Text('See last scheduled reminder'),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () {
+                context.push('/settings/reminder-debug');
+              },
+            ),
+          ),
           const SizedBox(height: AppSpacing.md),
           _SettingsInfoCard(
             icon: Icons.language_outlined,

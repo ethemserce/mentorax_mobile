@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mentorax/core/sync/sync_providers.dart';
+import 'package:mentorax/core/sync/widgets/sync_status_card.dart';
 import 'package:mentorax/core/state/app_refresh_controller.dart';
 import 'package:mentorax/features/materials/presentation/providers/material_providers.dart';
 import 'package:mentorax/features/progress/presentation/providers/progress_providers.dart';
@@ -17,6 +19,7 @@ class DashboardPage extends ConsumerWidget {
     final dashboardAsync = ref.watch(dashboardProvider);
     final progressAsync = ref.watch(progressSummaryProvider);
     final materialsAsync = ref.watch(materialListProvider);
+    final syncStatusAsync = ref.watch(syncStatusProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -41,7 +44,9 @@ class DashboardPage extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(dashboardProvider);
+              ref.invalidate(syncStatusProvider);
               await ref.read(dashboardProvider.future);
+              ref.invalidate(syncStatusProvider);
             },
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.lg),
@@ -51,6 +56,25 @@ class DashboardPage extends ConsumerWidget {
                   todayPlannedMinutes: dashboard.todayPlannedMinutes,
                   todayCompletedMinutes: dashboard.todayCompletedMinutes,
                   streakDays: progressAsync.value?.currentStreakDays ?? 0,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                syncStatusAsync.when(
+                  data: (status) => SyncStatusCard(
+                    status: status,
+                    compact: true,
+                    onSyncNow: () async {
+                      await ref.read(syncRepositoryProvider).synchronize();
+                      ref.invalidate(syncStatusProvider);
+                      ref.read(appRefreshControllerProvider).refreshStudyFlow();
+                    },
+                  ),
+                  loading: () => const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(AppSpacing.md),
+                      child: LinearProgressIndicator(),
+                    ),
+                  ),
+                  error: (error, stackTrace) => const SizedBox.shrink(),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 const Text(
