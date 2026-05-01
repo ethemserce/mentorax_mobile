@@ -1,3 +1,5 @@
+import 'package:mentorax/core/sync/sync_repository.dart';
+
 import 'dashboard_local_data_source.dart';
 import 'dashboard_service.dart';
 import 'models/mobile_dashboard_model.dart';
@@ -6,15 +8,19 @@ import 'models/next_session_model.dart';
 class DashboardRepository {
   final DashboardService _service;
   final DashboardLocalDataSource _local;
+  final SyncRepository? _sync;
 
   DashboardRepository({
     required DashboardService service,
     required DashboardLocalDataSource local,
+    SyncRepository? sync,
   }) : _service = service,
-       _local = local;
+       _local = local,
+       _sync = sync;
 
   Future<MobileDashboardModel> getDashboard() async {
     try {
+      await _pushPendingSyncOperations();
       final dashboard = await _service.getDashboard();
       final nextSession = dashboard.nextSession;
 
@@ -33,6 +39,7 @@ class DashboardRepository {
 
   Future<NextSessionModel> getNextSession() async {
     try {
+      await _pushPendingSyncOperations();
       final session = await _service.getNextSession();
       await _local.cacheNextSession(session);
 
@@ -105,5 +112,13 @@ class DashboardRepository {
       actualDurationMinutes: actualDurationMinutes,
       reviewNotes: reviewNotes,
     );
+  }
+
+  Future<void> _pushPendingSyncOperations() async {
+    try {
+      await _sync?.pushPendingOperations();
+    } catch (_) {
+      // Sync should never block local-first dashboard/session reads.
+    }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mentorax/core/database/database_provider.dart';
+import 'package:mentorax/core/sync/sync_providers.dart';
 import '../../data/dashboard_local_data_source.dart';
 import '../../data/dashboard_repository.dart';
 import '../../data/dashboard_service.dart';
@@ -19,6 +20,7 @@ final dashboardRepositoryProvider = Provider<DashboardRepository>((ref) {
   return DashboardRepository(
     service: ref.read(dashboardServiceProvider),
     local: ref.read(dashboardLocalDataSourceProvider),
+    sync: ref.read(syncRepositoryProvider),
   );
 });
 
