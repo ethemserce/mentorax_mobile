@@ -72,8 +72,33 @@ class DashboardRepository {
     required int difficultyScore,
     required int actualDurationMinutes,
     required String? reviewNotes,
-  }) {
-    return _service.completeSession(
+  }) async {
+    final completedLocally = await _local.markSessionCompletedLocally(
+      sessionId: sessionId,
+      qualityScore: qualityScore,
+      difficultyScore: difficultyScore,
+      actualDurationMinutes: actualDurationMinutes,
+      reviewNotes: reviewNotes,
+    );
+
+    if (completedLocally) {
+      try {
+        await _service.completeSession(
+          sessionId: sessionId,
+          qualityScore: qualityScore,
+          difficultyScore: difficultyScore,
+          actualDurationMinutes: actualDurationMinutes,
+          reviewNotes: reviewNotes,
+        );
+        await _local.markSessionCompleteSynced(sessionId);
+      } catch (_) {
+        return;
+      }
+
+      return;
+    }
+
+    await _service.completeSession(
       sessionId: sessionId,
       qualityScore: qualityScore,
       difficultyScore: difficultyScore,

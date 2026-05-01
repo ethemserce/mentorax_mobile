@@ -202,7 +202,16 @@ class _CompleteSessionPageState extends ConsumerState<CompleteSessionPage> {
         // New next session may not exist.
       }
 
-      final updatedProgress = await ref.refresh(progressSummaryProvider.future);
+      var streakDays = 0;
+
+      try {
+        final updatedProgress = await ref.refresh(
+          progressSummaryProvider.future,
+        );
+        streakDays = updatedProgress.currentStreakDays;
+      } catch (_) {
+        // Offline completion can still succeed locally before progress syncs.
+      }
 
       if (!mounted) return;
 
@@ -215,7 +224,7 @@ class _CompleteSessionPageState extends ConsumerState<CompleteSessionPage> {
         extra: {
           'durationMinutes': duration,
           'qualityScore': _qualityScore,
-          'streakDays': updatedProgress.currentStreakDays,
+          'streakDays': streakDays,
         },
       );
     } catch (e) {

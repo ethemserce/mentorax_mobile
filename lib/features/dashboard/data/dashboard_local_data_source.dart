@@ -99,6 +99,83 @@ class DashboardLocalDataSource {
     );
   }
 
+  Future<bool> markSessionCompletedLocally({
+    required String sessionId,
+    required int qualityScore,
+    required int difficultyScore,
+    required int actualDurationMinutes,
+    required String? reviewNotes,
+    DateTime? completedAtUtc,
+  }) async {
+    final existing = await (_database.select(
+      _database.localStudySessions,
+    )..where((row) => row.id.equals(sessionId))).getSingleOrNull();
+
+    if (existing == null) return false;
+
+    final completedAt = completedAtUtc ?? DateTime.now().toUtc();
+
+    await (_database.update(
+      _database.localStudySessions,
+    )..where((row) => row.id.equals(sessionId))).write(
+      LocalStudySessionsCompanion(
+        completedAtUtc: Value(completedAt),
+        isCompleted: const Value(true),
+        qualityScore: Value(qualityScore),
+        difficultyScore: Value(difficultyScore),
+        actualDurationMinutes: Value(actualDurationMinutes),
+        reviewNotes: Value(reviewNotes),
+        status: const Value('Completed'),
+        syncStatus: const Value('pending'),
+        updatedAtUtc: Value(DateTime.now().toUtc()),
+      ),
+    );
+
+    await _database
+        .into(_database.syncOutbox)
+        .insert(
+          SyncOutboxCompanion.insert(
+            id: 'complete-session-$sessionId',
+            operationType: 'StudySessionCompleted',
+            entityType: 'StudySession',
+            entityId: sessionId,
+            payload: jsonEncode({
+              'sessionId': sessionId,
+              'qualityScore': qualityScore,
+              'difficultyScore': difficultyScore,
+              'actualDurationMinutes': actualDurationMinutes,
+              'reviewNotes': reviewNotes,
+              'completedAtUtc': completedAt.toIso8601String(),
+            }),
+            createdAtUtc: completedAt,
+            updatedAtUtc: Value(DateTime.now().toUtc()),
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+
+    return true;
+  }
+
+  Future<void> markSessionCompleteSynced(String sessionId) async {
+    await (_database.update(
+      _database.localStudySessions,
+    )..where((row) => row.id.equals(sessionId))).write(
+      LocalStudySessionsCompanion(
+        syncStatus: const Value('synced'),
+        updatedAtUtc: Value(DateTime.now().toUtc()),
+      ),
+    );
+
+    await (_database.update(
+      _database.syncOutbox,
+    )..where((row) => row.id.equals('complete-session-$sessionId'))).write(
+      SyncOutboxCompanion(
+        status: const Value('synced'),
+        updatedAtUtc: Value(DateTime.now().toUtc()),
+      ),
+    );
+  }
+
   Future<NextSessionModel?> getNextSession() async {
     final row = await _nextPendingSessionRow();
     if (row == null) return null;

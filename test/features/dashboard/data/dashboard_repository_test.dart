@@ -69,6 +69,78 @@ void main() {
       expect(outboxOperation.status, 'synced');
     },
   );
+
+  test(
+    'completes cached sessions locally when remote complete fails',
+    () async {
+      final session = _session();
+      final repository = DashboardRepository(
+        service: _FailingDashboardService(),
+        local: local,
+      );
+
+      await local.cacheNextSession(session);
+
+      await repository.completeSession(
+        sessionId: session.sessionId,
+        qualityScore: 4,
+        difficultyScore: 3,
+        actualDurationMinutes: 22,
+        reviewNotes: 'Offline completion',
+      );
+
+      final localSession = await database
+          .select(database.localStudySessions)
+          .getSingle();
+      final outboxOperation = await database
+          .select(database.syncOutbox)
+          .getSingle();
+      final nextSession = await local.getNextSession();
+
+      expect(localSession.isCompleted, isTrue);
+      expect(localSession.completedAtUtc, isNotNull);
+      expect(localSession.qualityScore, 4);
+      expect(localSession.difficultyScore, 3);
+      expect(localSession.actualDurationMinutes, 22);
+      expect(localSession.reviewNotes, 'Offline completion');
+      expect(localSession.syncStatus, 'pending');
+      expect(outboxOperation.operationType, 'StudySessionCompleted');
+      expect(outboxOperation.status, 'pending');
+      expect(nextSession, isNull);
+    },
+  );
+
+  test(
+    'marks local session completion as synced when remote complete succeeds',
+    () async {
+      final session = _session();
+      final repository = DashboardRepository(
+        service: _SuccessfulDashboardService(),
+        local: local,
+      );
+
+      await local.cacheNextSession(session);
+
+      await repository.completeSession(
+        sessionId: session.sessionId,
+        qualityScore: 5,
+        difficultyScore: 2,
+        actualDurationMinutes: 25,
+        reviewNotes: null,
+      );
+
+      final localSession = await database
+          .select(database.localStudySessions)
+          .getSingle();
+      final outboxOperation = await database
+          .select(database.syncOutbox)
+          .getSingle();
+
+      expect(localSession.isCompleted, isTrue);
+      expect(localSession.syncStatus, 'synced');
+      expect(outboxOperation.status, 'synced');
+    },
+  );
 }
 
 NextSessionModel _session() {
@@ -89,6 +161,17 @@ class _FailingDashboardService extends DashboardService {
   Future<NextSessionModel> startSession(String sessionId) {
     throw Exception('network unavailable');
   }
+
+  @override
+  Future<void> completeSession({
+    required String sessionId,
+    required int qualityScore,
+    required int difficultyScore,
+    required int actualDurationMinutes,
+    required String? reviewNotes,
+  }) {
+    throw Exception('network unavailable');
+  }
 }
 
 class _SuccessfulDashboardService extends DashboardService {
@@ -107,4 +190,13 @@ class _SuccessfulDashboardService extends DashboardService {
       isDue: true,
     );
   }
+
+  @override
+  Future<void> completeSession({
+    required String sessionId,
+    required int qualityScore,
+    required int difficultyScore,
+    required int actualDurationMinutes,
+    required String? reviewNotes,
+  }) async {}
 }
