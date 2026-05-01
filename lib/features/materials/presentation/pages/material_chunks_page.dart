@@ -14,10 +14,7 @@ import '../providers/material_providers.dart';
 class MaterialChunksPage extends ConsumerWidget {
   final String materialId;
 
-  const MaterialChunksPage({
-    super.key,
-    required this.materialId,
-  });
+  const MaterialChunksPage({super.key, required this.materialId});
 
   Future<void> _moveChunk({
     required WidgetRef ref,
@@ -30,52 +27,50 @@ class MaterialChunksPage extends ConsumerWidget {
     final item = updated.removeAt(fromIndex);
     updated.insert(toIndex, item);
 
-    await ref.read(materialServiceProvider).reorderMaterialChunks(
+    await ref
+        .read(materialRepositoryProvider)
+        .reorderMaterialChunks(
           materialId: materialId,
           chunkIds: updated.map((x) => x.id).toList(),
         );
 
-ref
-    .read(appRefreshControllerProvider)
-    .refreshAfterChunkChanged(materialId);
+    ref.read(appRefreshControllerProvider).refreshAfterChunkChanged(materialId);
   }
 
-  
-Future<void> _deleteChunk({
-  required BuildContext context,
-  required WidgetRef ref,
-  required String chunkId,
-}) async {
-  final confirmed = await showAppConfirmDialog(
-    context: context,
-    title: 'Delete Chunk',
-    message:
-        'Are you sure you want to delete this chunk? If this chunk is used in a study plan, it cannot be deleted.',
-    confirmText: 'Delete',
-    isDanger: true,
-  );
+  Future<void> _deleteChunk({
+    required BuildContext context,
+    required WidgetRef ref,
+    required String chunkId,
+  }) async {
+    final confirmed = await showAppConfirmDialog(
+      context: context,
+      title: 'Delete Chunk',
+      message:
+          'Are you sure you want to delete this chunk? If this chunk is used in a study plan, it cannot be deleted.',
+      confirmText: 'Delete',
+      isDanger: true,
+    );
 
-  if (!confirmed) return;
+    if (!confirmed) return;
 
-  try {
-    await ref.read(materialServiceProvider).deleteMaterialChunk(
-          materialId: materialId,
-          chunkId: chunkId,
-        );
+    try {
+      await ref
+          .read(materialRepositoryProvider)
+          .deleteMaterialChunk(materialId: materialId, chunkId: chunkId);
 
-    ref
-        .read(appRefreshControllerProvider)
-        .refreshAfterChunkChanged(materialId);
+      ref
+          .read(appRefreshControllerProvider)
+          .refreshAfterChunkChanged(materialId);
 
-    if (!context.mounted) return;
+      if (!context.mounted) return;
 
-    showSuccessSnackBar(context, 'Chunk deleted');
-  } catch (e) {
-    if (!context.mounted) return;
+      showSuccessSnackBar(context, 'Chunk deleted');
+    } catch (e) {
+      if (!context.mounted) return;
 
-    showErrorSnackBar(context, e);
+      showErrorSnackBar(context, e);
+    }
   }
-}
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -92,11 +87,11 @@ Future<void> _deleteChunk({
                 extra: materialId,
               );
 
-if (created == true) {
-  ref
-      .read(appRefreshControllerProvider)
-      .refreshAfterChunkChanged(materialId);
-}
+              if (created == true) {
+                ref
+                    .read(appRefreshControllerProvider)
+                    .refreshAfterChunkChanged(materialId);
+              }
             },
             icon: const Icon(Icons.add_outlined),
           ),
@@ -107,17 +102,15 @@ if (created == true) {
           if (chunks.isEmpty) {
             return RefreshIndicator(
               onRefresh: () async {
-               ref
-    .read(appRefreshControllerProvider)
-    .refreshAfterChunkChanged(materialId);
-    
+                ref
+                    .read(appRefreshControllerProvider)
+                    .refreshAfterChunkChanged(materialId);
+
                 await ref.read(materialChunksProvider(materialId).future);
               },
               child: ListView(
                 padding: const EdgeInsets.all(AppSpacing.lg),
-                children: [
-                  _EmptyChunksState(materialId: materialId),
-                ],
+                children: [_EmptyChunksState(materialId: materialId)],
               ),
             );
           }
@@ -144,28 +137,28 @@ if (created == true) {
                       extra: chunk,
                     );
 
-if (updated == true) {
-  ref
-      .read(appRefreshControllerProvider)
-      .refreshAfterChunkChanged(materialId);
-}
+                    if (updated == true) {
+                      ref
+                          .read(appRefreshControllerProvider)
+                          .refreshAfterChunkChanged(materialId);
+                    }
                   },
                   onMoveUp: index == 0
                       ? null
                       : () => _moveChunk(
-                            ref: ref,
-                            chunks: chunks,
-                            fromIndex: index,
-                            toIndex: index - 1,
-                          ),
+                          ref: ref,
+                          chunks: chunks,
+                          fromIndex: index,
+                          toIndex: index - 1,
+                        ),
                   onMoveDown: index == chunks.length - 1
                       ? null
                       : () => _moveChunk(
-                            ref: ref,
-                            chunks: chunks,
-                            fromIndex: index,
-                            toIndex: index + 1,
-                          ),
+                          ref: ref,
+                          chunks: chunks,
+                          fromIndex: index,
+                          toIndex: index + 1,
+                        ),
                   onDelete: () => _deleteChunk(
                     context: context,
                     ref: ref,
@@ -180,10 +173,7 @@ if (updated == true) {
         error: (error, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Text(
-              error.toString(),
-              textAlign: TextAlign.center,
-            ),
+            child: Text(error.toString(), textAlign: TextAlign.center),
           ),
         ),
       ),
@@ -224,9 +214,7 @@ class _ChunkCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    child: Text(chunk.orderNo.toString()),
-                  ),
+                  CircleAvatar(child: Text(chunk.orderNo.toString())),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
@@ -315,15 +303,14 @@ class _ChunkCard extends StatelessWidget {
                 ),
               ),
 
-              if (chunk.summary != null && chunk.summary!.trim().isNotEmpty) ...[
+              if (chunk.summary != null &&
+                  chunk.summary!.trim().isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.md),
                 Text(
                   'Summary: ${chunk.summary}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                  ),
+                  style: const TextStyle(color: AppColors.textSecondary),
                 ),
               ],
 
@@ -333,19 +320,11 @@ class _ChunkCard extends StatelessWidget {
                 spacing: AppSpacing.sm,
                 runSpacing: AppSpacing.sm,
                 children: [
-                  _MetaChip(
-                    label: '${chunk.estimatedStudyMinutes} min',
-                  ),
-                  _MetaChip(
-                    label: 'Difficulty ${chunk.difficultyLevel}',
-                  ),
-                  _MetaChip(
-                    label: '${chunk.characterCount} chars',
-                  ),
+                  _MetaChip(label: '${chunk.estimatedStudyMinutes} min'),
+                  _MetaChip(label: 'Difficulty ${chunk.difficultyLevel}'),
+                  _MetaChip(label: '${chunk.characterCount} chars'),
                   if (chunk.isGeneratedByAI)
-                    const _MetaChip(
-                      label: 'AI Generated',
-                    ),
+                    const _MetaChip(label: 'AI Generated'),
                 ],
               ),
             ],
@@ -359,9 +338,7 @@ class _ChunkCard extends StatelessWidget {
 class _MetaChip extends StatelessWidget {
   final String label;
 
-  const _MetaChip({
-    required this.label,
-  });
+  const _MetaChip({required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -390,16 +367,15 @@ class _MetaChip extends StatelessWidget {
 class _EmptyChunksState extends StatelessWidget {
   final String materialId;
 
-  const _EmptyChunksState({
-    required this.materialId,
-  });
+  const _EmptyChunksState({required this.materialId});
 
   @override
   Widget build(BuildContext context) {
     return AppEmptyState(
       icon: Icons.account_tree_outlined,
       title: 'No chunks found',
-      subtitle: 'Use the + button to split this material into smaller study parts.',
+      subtitle:
+          'Use the + button to split this material into smaller study parts.',
       actionText: 'Add Chunk',
       onAction: () {
         context.push('/materials/chunks/create', extra: materialId);

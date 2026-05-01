@@ -10,10 +10,7 @@ import '../providers/material_providers.dart';
 class CreateMaterialChunkPage extends ConsumerStatefulWidget {
   final String materialId;
 
-  const CreateMaterialChunkPage({
-    super.key,
-    required this.materialId,
-  });
+  const CreateMaterialChunkPage({super.key, required this.materialId});
 
   @override
   ConsumerState<CreateMaterialChunkPage> createState() =>
@@ -55,7 +52,9 @@ class _CreateMaterialChunkPageState
     });
 
     try {
-      await ref.read(materialServiceProvider).createMaterialChunk(
+      await ref
+          .read(materialRepositoryProvider)
+          .createMaterialChunk(
             materialId: widget.materialId,
             request: CreateMaterialChunkRequest(
               title: _titleController.text.trim().isEmpty
@@ -73,21 +72,23 @@ class _CreateMaterialChunkPageState
             ),
           );
 
-      ref.read(appRefreshControllerProvider).refreshAfterChunkChanged(widget.materialId);
+      ref
+          .read(appRefreshControllerProvider)
+          .refreshAfterChunkChanged(widget.materialId);
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Chunk created')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Chunk created')));
 
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) {
         setState(() {
@@ -100,9 +101,7 @@ class _CreateMaterialChunkPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Chunk'),
-      ),
+      appBar: AppBar(title: const Text('Create Chunk')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -119,9 +118,7 @@ class _CreateMaterialChunkPageState
             const SizedBox(height: AppSpacing.sm),
             const Text(
               'Split your material into smaller study parts.',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(color: AppColors.textSecondary),
             ),
             const SizedBox(height: AppSpacing.lg),
 

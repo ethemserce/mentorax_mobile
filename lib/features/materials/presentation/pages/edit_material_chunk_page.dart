@@ -11,10 +11,7 @@ import '../providers/material_providers.dart';
 class EditMaterialChunkPage extends ConsumerStatefulWidget {
   final MaterialChunkModel chunk;
 
-  const EditMaterialChunkPage({
-    super.key,
-    required this.chunk,
-  });
+  const EditMaterialChunkPage({super.key, required this.chunk});
 
   @override
   ConsumerState<EditMaterialChunkPage> createState() =>
@@ -39,12 +36,18 @@ class _EditMaterialChunkPageState extends ConsumerState<EditMaterialChunkPage> {
 
     _titleController = TextEditingController(text: widget.chunk.title ?? '');
     _contentController = TextEditingController(text: widget.chunk.content);
-    _summaryController = TextEditingController(text: widget.chunk.summary ?? '');
-    _keywordsController = TextEditingController(text: widget.chunk.keywords ?? '');
-    _difficultyController =
-        TextEditingController(text: widget.chunk.difficultyLevel.toString());
-    _minutesController =
-        TextEditingController(text: widget.chunk.estimatedStudyMinutes.toString());
+    _summaryController = TextEditingController(
+      text: widget.chunk.summary ?? '',
+    );
+    _keywordsController = TextEditingController(
+      text: widget.chunk.keywords ?? '',
+    );
+    _difficultyController = TextEditingController(
+      text: widget.chunk.difficultyLevel.toString(),
+    );
+    _minutesController = TextEditingController(
+      text: widget.chunk.estimatedStudyMinutes.toString(),
+    );
   }
 
   @override
@@ -69,7 +72,9 @@ class _EditMaterialChunkPageState extends ConsumerState<EditMaterialChunkPage> {
     });
 
     try {
-      await ref.read(materialServiceProvider).updateMaterialChunk(
+      await ref
+          .read(materialRepositoryProvider)
+          .updateMaterialChunk(
             materialId: widget.chunk.learningMaterialId,
             chunkId: widget.chunk.id,
             request: UpdateMaterialChunkRequest(
@@ -88,21 +93,23 @@ class _EditMaterialChunkPageState extends ConsumerState<EditMaterialChunkPage> {
             ),
           );
 
-      ref.read(appRefreshControllerProvider).refreshAfterChunkChanged(widget.chunk.learningMaterialId);
-  
+      ref
+          .read(appRefreshControllerProvider)
+          .refreshAfterChunkChanged(widget.chunk.learningMaterialId);
+
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Chunk updated')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Chunk updated')));
 
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) {
         setState(() {
@@ -115,9 +122,7 @@ class _EditMaterialChunkPageState extends ConsumerState<EditMaterialChunkPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Chunk'),
-      ),
+      appBar: AppBar(title: const Text('Edit Chunk')),
       body: Form(
         key: _formKey,
         child: ListView(

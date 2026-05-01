@@ -64,9 +64,13 @@ void main() {
 }
 
 StudyPlanModel _samplePlan() {
-  final scheduledAt = DateTime.now().toUtc().subtract(
-    const Duration(minutes: 10),
-  );
+  final now = DateTime.now();
+  final todayStart = DateTime(now.year, now.month, now.day);
+  final scheduledLocal =
+      now.difference(todayStart) > const Duration(minutes: 15)
+      ? now.subtract(const Duration(minutes: 10))
+      : todayStart;
+  final scheduledAt = scheduledLocal.toUtc();
   final session = StudyPlanSessionModel(
     id: 'session-1',
     studyPlanId: 'plan-1',
