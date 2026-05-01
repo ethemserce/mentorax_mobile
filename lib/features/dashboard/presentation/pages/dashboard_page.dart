@@ -19,6 +19,7 @@ class DashboardPage extends ConsumerWidget {
     final materialsAsync = ref.watch(materialListProvider);
 
     return Scaffold(
+        backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
         title: const Text('MentoraX'),
         actions: [
@@ -41,149 +42,147 @@ class DashboardPage extends ConsumerWidget {
               ref.invalidate(dashboardProvider);
               await ref.read(dashboardProvider.future);
             },
-            child: ListView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              children: [
-                _HeroCard(
-                  dueCount: dashboard.dueCount,
-                  todayPlannedMinutes: dashboard.todayPlannedMinutes,
-                  todayCompletedMinutes: dashboard.todayCompletedMinutes,
-                  streakDays: progressAsync.value?.currentStreakDays ?? 0,
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                const Text(
-                  'Today Overview',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _InfoCard(
-                        title: 'Planned',
-                        value: '${dashboard.todayPlannedMinutes} min',
-                        icon: Icons.schedule,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: _InfoCard(
-                        title: 'Completed',
-                        value: '${dashboard.todayCompletedMinutes} min',
-                        icon: Icons.check_circle_outline,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                const Text(
-                  'Next Session',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-
-const Text(
-  'Recent Materials',
-  style: TextStyle(
-    fontSize: 20,
-    fontWeight: FontWeight.bold,
-  ),
-),
-
-const SizedBox(height: AppSpacing.md),
-
-materialsAsync.when(
-  data: (materials) {
-    if (materials.isEmpty) {
-      return const _EmptyStateCard(
-        title: 'No materials yet',
-        subtitle: 'Create your first material to start learning.',
-        icon: Icons.menu_book_outlined,
-      );
-    }
-
-    final recentMaterials = materials.take(3).toList();
-
-    return Column(
-      children: recentMaterials.map((material) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.md),
-          child: _RecentMaterialCard(
-            title: material.title,
-            materialType: material.materialType,
-            durationMinutes: material.estimatedDurationMinutes,
-            hasActivePlan: material.hasActivePlan,
-            onTap: () {
-              context.push('/materials/detail', extra: material.id);
-            },
-          ),
-        );
-      }).toList(),
-    );
-  },
-  loading: () => const Card(
-    child: Padding(
-      padding: EdgeInsets.all(AppSpacing.lg),
-      child: Center(child: CircularProgressIndicator()),
+child: ListView(
+  padding: const EdgeInsets.all(AppSpacing.lg),
+  children: [
+    _HeroCard(
+      dueCount: dashboard.dueCount,
+      todayPlannedMinutes: dashboard.todayPlannedMinutes,
+      todayCompletedMinutes: dashboard.todayCompletedMinutes,
+      streakDays: progressAsync.value?.currentStreakDays ?? 0,
     ),
-  ),
-  error: (error, _) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Text(error.toString()),
-    ),
-  ),
-),
-                const SizedBox(height: AppSpacing.md),
-                if (dashboard.nextSession == null)
-                  const _EmptyStateCard(
-                    title: 'No session available',
-                    subtitle: 'Create a material and study plan to get started.',
-                    icon: Icons.event_note_outlined,
-                  )
-                else
-                  _NextSessionCard(
-                    title: dashboard.nextSession!.materialTitle,
-                    estimatedMinutes: dashboard.nextSession!.estimatedMinutes,
-                    isDue: dashboard.nextSession!.isDue,
-                    onTap: () {
-                      context.go('/next-session');
-                    },
-                  ),
-                const SizedBox(height: AppSpacing.lg),
-                const Text(
-                  'Weak Materials',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                if (dashboard.weakMaterials.isEmpty)
-                  const _EmptyStateCard(
-                    title: 'No weak materials',
-                    subtitle: 'Great job. Your weak material list is empty.',
-                    icon: Icons.emoji_events_outlined,
-                  )
-                else
-                  ...dashboard.weakMaterials.map(
-                    (item) => Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                      child: _WeakMaterialCard(
-                        title: item.title,
-                        performanceLevel: item.performanceLevel,
-                        nextReviewText: item.nextReviewAtUtc.toLocal().toString(),
-                      ),
-                    ),
-                  ),
-              ],
+
+    const SizedBox(height: AppSpacing.lg),
+
+    _DashboardSection(
+      title: 'Today',
+      subtitle: 'Your learning progress for today',
+      icon: Icons.today_outlined,
+      child: Row(
+        children: [
+          Expanded(
+            child: _InfoCard(
+              title: 'Planned',
+              value: '${dashboard.todayPlannedMinutes} min',
+              icon: Icons.schedule,
             ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: _InfoCard(
+              title: 'Completed',
+              value: '${dashboard.todayCompletedMinutes} min',
+              icon: Icons.check_circle_outline,
+            ),
+          ),
+        ],
+      ),
+    ),
+
+    const SizedBox(height: AppSpacing.lg),
+
+    _DashboardSection(
+      title: 'Next Session',
+      subtitle: 'Continue with your next planned study',
+      icon: Icons.play_circle_outline,
+      child: dashboard.nextSession == null
+          ? const _EmptyStateCard(
+              title: 'No session available',
+              subtitle: 'Create a material and study plan to get started.',
+              icon: Icons.event_note_outlined,
+            )
+          : _NextSessionCard(
+              title: dashboard.nextSession!.materialTitle,
+              estimatedMinutes: dashboard.nextSession!.estimatedMinutes,
+              isDue: dashboard.nextSession!.isDue,
+              onTap: dashboard.nextSession!.isDue
+                  ? () {
+                      context.go('/next-session');
+                    }
+                  : () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'This session is scheduled for later.',
+                          ),
+                        ),
+                      );
+                    },
+            ),
+    ),
+
+    const SizedBox(height: AppSpacing.lg),
+
+    _DashboardSection(
+      title: 'Recent Materials',
+      subtitle: 'Your latest learning materials',
+      icon: Icons.menu_book_outlined,
+      child: materialsAsync.when(
+        data: (materials) {
+          if (materials.isEmpty) {
+            return const _EmptyStateCard(
+              title: 'No materials yet',
+              subtitle: 'Create your first material to start learning.',
+              icon: Icons.menu_book_outlined,
+            );
+          }
+
+          final recentMaterials = materials.take(3).toList();
+
+          return Column(
+            children: recentMaterials.map((material) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: _RecentMaterialCard(
+                  title: material.title,
+                  materialType: material.materialType,
+                  durationMinutes: material.estimatedDurationMinutes,
+                  hasActivePlan: material.hasActivePlan,
+                  onTap: () {
+                    context.push('/materials/detail', extra: material.id);
+                  },
+                ),
+              );
+            }).toList(),
+          );
+        },
+        loading: () => const Padding(
+          padding: EdgeInsets.all(AppSpacing.lg),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (error, _) => Text(error.toString()),
+      ),
+    ),
+
+    const SizedBox(height: AppSpacing.lg),
+
+    _DashboardSection(
+      title: 'Weak Materials',
+      subtitle: 'Materials that may need more repetition',
+      icon: Icons.trending_down_outlined,
+      child: dashboard.weakMaterials.isEmpty
+          ? const _EmptyStateCard(
+              title: 'No weak materials',
+              subtitle: 'Great job. Your weak material list is empty.',
+              icon: Icons.emoji_events_outlined,
+            )
+          : Column(
+              children: dashboard.weakMaterials.map((item) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  child: _WeakMaterialCard(
+                    title: item.title,
+                    performanceLevel: item.performanceLevel,
+                    nextReviewText: item.nextReviewAtUtc.toLocal().toString(),
+                  ),
+                );
+              }).toList(),
+            ),
+    ),
+
+    const SizedBox(height: AppSpacing.xl),
+  ],
+),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -409,9 +408,11 @@ class _NextSessionCard extends StatelessWidget {
                   color: AppColors.primary.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(
-                  Icons.play_arrow_rounded,
-                  color: AppColors.primary,
+                child: Icon(
+                  isDue ? Icons.play_arrow_rounded : Icons.lock_clock_outlined,
+                  color: isDue
+    ? AppColors.primary.withOpacity(0.12)
+    : Colors.grey.withOpacity(0.12),
                   size: 32,
                 ),
               ),
@@ -430,7 +431,9 @@ class _NextSessionCard extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      '$estimatedMinutes min • ${isDue ? "Due now" : "Upcoming"}',
+                      isDue
+                          ? 'Ready now • $estimatedMinutes min'
+                          : 'Scheduled for later • $estimatedMinutes min',
                       style: const TextStyle(
                         color: AppColors.textSecondary,
                       ),
@@ -619,6 +622,88 @@ class _RecentMaterialCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DashboardSection extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Widget child;
+
+  const _DashboardSection({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppColors.border,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  icon,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          child,
+        ],
       ),
     );
   }
