@@ -12,10 +12,10 @@ class SyncService {
 
   SyncService({Dio? dio}) : _dio = dio ?? DioClient.dio;
 
-  Future<Map<String, dynamic>> bootstrap() async {
+  Future<SyncBootstrapModel> bootstrap() async {
     try {
       final response = await _dio.get('/api/sync/bootstrap');
-      return response.data as Map<String, dynamic>;
+      return SyncBootstrapModel.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (error) {
       throw ApiException.fromDioException(error);
     }

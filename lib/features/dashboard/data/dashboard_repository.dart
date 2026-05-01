@@ -116,7 +116,7 @@ class DashboardRepository {
 
   Future<void> _pushPendingSyncOperations() async {
     try {
-      await _sync?.pushPendingOperations();
+      await _sync?.synchronize();
     } catch (_) {
       // Sync should never block local-first dashboard/session reads.
     }

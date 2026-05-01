@@ -6,6 +6,7 @@ import 'package:mentorax/core/sync/sync_repository.dart';
 import 'package:mentorax/core/sync/sync_service.dart';
 import 'package:mentorax/features/dashboard/data/dashboard_local_data_source.dart';
 import 'package:mentorax/features/dashboard/data/models/next_session_model.dart';
+import 'package:mentorax/features/study_plans/data/study_plan_local_data_source.dart';
 
 void main() {
   late AppDatabase database;
@@ -142,6 +143,74 @@ void main() {
       expect(localSession.syncStatus, 'pending');
     },
   );
+
+  test('synchronizes bootstrap data into the local study cache', () async {
+    final service = _FakeSyncService(
+      response: (operations) =>
+          _response(operations, statusFor: (_) => 'applied'),
+      bootstrapResponse: _bootstrap(),
+    );
+    final repository = SyncRepository(
+      database: database,
+      service: service,
+      studyPlanLocal: StudyPlanLocalDataSource(database),
+      dashboardLocal: dashboardLocal,
+    );
+
+    final result = await repository.synchronize();
+
+    final plans = await database.select(database.localStudyPlans).get();
+    final items = await database.select(database.localStudyPlanItems).get();
+    final sessions = await database.select(database.localStudySessions).get();
+
+    expect(result.attemptedCount, 0);
+    expect(service.bootstrapCalled, isTrue);
+    expect(plans, hasLength(1));
+    expect(plans.single.title, 'Server Plan');
+    expect(items, hasLength(1));
+    expect(items.single.title, 'Server Item');
+    expect(sessions, hasLength(1));
+    expect(sessions.single.id, 'session-1');
+    expect(sessions.single.studyPlanItemId, 'item-1');
+    expect(sessions.single.syncStatus, 'synced');
+  });
+
+  test('skips bootstrap when push has retryable failures', () async {
+    final session = _session();
+    await dashboardLocal.cacheNextSession(session);
+    await dashboardLocal.markSessionStartedLocally(
+      session.sessionId,
+      startedAtUtc: DateTime.utc(2026, 5, 1, 9),
+    );
+
+    final service = _FakeSyncService(
+      response: (operations) => _response(
+        operations,
+        statusFor: (_) => 'failed',
+        errorFor: (_) => 'backend rejected operation',
+      ),
+      bootstrapResponse: _bootstrap(),
+    );
+    final repository = SyncRepository(
+      database: database,
+      service: service,
+      studyPlanLocal: StudyPlanLocalDataSource(database),
+      dashboardLocal: dashboardLocal,
+    );
+
+    final result = await repository.synchronize();
+
+    final plans = await database.select(database.localStudyPlans).get();
+    final outboxOperation = await database
+        .select(database.syncOutbox)
+        .getSingle();
+
+    expect(result.retryCount, 1);
+    expect(service.bootstrapCalled, isFalse);
+    expect(plans, isEmpty);
+    expect(outboxOperation.status, 'pending');
+    expect(outboxOperation.lastError, 'backend rejected operation');
+  });
 }
 
 NextSessionModel _session() {
@@ -176,11 +245,87 @@ SyncPushResponse _response(
   );
 }
 
+SyncBootstrapModel _bootstrap() {
+  return SyncBootstrapModel.fromJson({
+    'serverTimeUtc': '2026-05-01T10:00:00Z',
+    'studyPlans': [
+      {
+        'id': 'plan-1',
+        'userId': 'user-1',
+        'learningMaterialId': 'material-1',
+        'title': 'Server Plan',
+        'startDate': '2026-05-01',
+        'dailyTargetMinutes': 25,
+        'status': 'Active',
+        'sessions': const [],
+        'items': [
+          {
+            'id': 'item-1',
+            'studyPlanId': 'plan-1',
+            'materialChunkId': null,
+            'title': 'Server Item',
+            'description': null,
+            'itemType': 'Study',
+            'orderNo': 1,
+            'plannedDateUtc': '2026-05-01T08:55:00Z',
+            'plannedStartTime': null,
+            'plannedEndTime': null,
+            'durationMinutes': 25,
+            'status': 'Pending',
+            'materialChunk': null,
+            'sessions': [_sessionJson()],
+          },
+        ],
+      },
+    ],
+    'dashboard': {
+      'dueCount': 1,
+      'todayPlannedMinutes': 25,
+      'todayCompletedMinutes': 0,
+      'nextSession': _nextSessionJson(),
+      'weakMaterials': const [],
+    },
+    'nextSession': _nextSessionJson(),
+  });
+}
+
+Map<String, Object?> _sessionJson() {
+  return {
+    'id': 'session-1',
+    'studyPlanId': 'plan-1',
+    'sequenceNumber': 1,
+    'scheduledAtUtc': '2026-05-01T08:55:00Z',
+    'plannedDurationMinutes': 25,
+    'status': 'Planned',
+    'completedAtUtc': null,
+    'actualDurationMinutes': null,
+    'notes': null,
+    'easinessFactor': null,
+    'intervalDays': null,
+    'repetitionCount': null,
+  };
+}
+
+Map<String, Object?> _nextSessionJson() {
+  return {
+    'sessionId': 'session-1',
+    'studyPlanId': 'plan-1',
+    'materialId': 'material-1',
+    'materialTitle': 'Server Plan',
+    'scheduledAtUtc': '2026-05-01T08:55:00Z',
+    'startedAtUtc': null,
+    'estimatedMinutes': 25,
+    'isDue': true,
+  };
+}
+
 class _FakeSyncService extends SyncService {
   final SyncPushResponse Function(List<SyncOutboxData> operations) response;
+  final SyncBootstrapModel? bootstrapResponse;
   List<SyncOutboxData> operations = const [];
+  bool bootstrapCalled = false;
 
-  _FakeSyncService({required this.response});
+  _FakeSyncService({required this.response, this.bootstrapResponse});
 
   @override
   Future<SyncPushResponse> pushOperations(
@@ -188,6 +333,12 @@ class _FakeSyncService extends SyncService {
   ) async {
     this.operations = operations;
     return response(operations);
+  }
+
+  @override
+  Future<SyncBootstrapModel> bootstrap() async {
+    bootstrapCalled = true;
+    return bootstrapResponse ?? _bootstrap();
   }
 }
 

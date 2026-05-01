@@ -12,19 +12,32 @@ class DashboardLocalDataSource {
   DashboardLocalDataSource(this._database);
 
   Future<void> cacheNextSession(NextSessionModel session) async {
+    final existing = await (_database.select(
+      _database.localStudySessions,
+    )..where((row) => row.id.equals(session.sessionId))).getSingleOrNull();
+
+    if (existing?.syncStatus == 'pending') return;
+
     await _database
         .into(_database.localStudySessions)
         .insert(
           LocalStudySessionsCompanion.insert(
             id: session.sessionId,
             studyPlanId: session.studyPlanId,
+            studyPlanItemId: Value(existing?.studyPlanItemId),
             learningMaterialId: session.materialId,
             materialTitle: Value(session.materialTitle),
+            userId: Value(existing?.userId),
+            studyProgressId: Value(existing?.studyProgressId),
             scheduledAtUtc: session.scheduledAtUtc,
             startedAtUtc: Value(session.startedAtUtc),
             isCompleted: const Value(false),
+            sequenceNumber: Value(existing?.sequenceNumber ?? 0),
             plannedDurationMinutes: Value(session.estimatedMinutes),
-            status: const Value('Pending'),
+            status: Value(
+              session.startedAtUtc == null ? 'Pending' : 'InProgress',
+            ),
+            syncStatus: const Value('synced'),
             updatedAtUtc: Value(DateTime.now().toUtc()),
           ),
           mode: InsertMode.insertOrReplace,
