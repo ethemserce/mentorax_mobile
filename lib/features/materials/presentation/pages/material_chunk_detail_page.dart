@@ -8,10 +8,7 @@ import '../../data/models/material_chunk_model.dart';
 class MaterialChunkDetailPage extends StatelessWidget {
   final MaterialChunkModel chunk;
 
-  const MaterialChunkDetailPage({
-    super.key,
-    required this.chunk,
-  });
+  const MaterialChunkDetailPage({super.key, required this.chunk});
 
   @override
   Widget build(BuildContext context) {
@@ -19,16 +16,19 @@ class MaterialChunkDetailPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Chunk Detail'),
         actions: [
-IconButton(
-  onPressed: () async {
-    final updated = await context.push('/materials/chunks/edit', extra: chunk);
+          IconButton(
+            onPressed: () async {
+              final updated = await context.push(
+                '/materials/chunks/edit',
+                extra: chunk,
+              );
 
-    if (updated == true && context.mounted) {
-      context.pop(true);
-    }
-  },
-  icon: const Icon(Icons.edit_outlined),
-),
+              if (updated == true && context.mounted) {
+                context.pop(true);
+              }
+            },
+            icon: const Icon(Icons.edit_outlined),
+          ),
         ],
       ),
       body: ListView(
@@ -39,9 +39,7 @@ IconButton(
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    child: Text(chunk.orderNo.toString()),
-                  ),
+                  CircleAvatar(child: Text(chunk.orderNo.toString())),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
@@ -139,9 +137,18 @@ IconButton(
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  _MetaRow(label: 'Character Count', value: '${chunk.characterCount}'),
-                  _MetaRow(label: 'AI Generated', value: chunk.isGeneratedByAI ? 'Yes' : 'No'),
-                  _MetaRow(label: 'Learning Material Id', value: chunk.learningMaterialId),
+                  _MetaRow(
+                    label: 'Character Count',
+                    value: '${chunk.characterCount}',
+                  ),
+                  _MetaRow(
+                    label: 'AI Generated',
+                    value: chunk.isGeneratedByAI ? 'Yes' : 'No',
+                  ),
+                  _MetaRow(
+                    label: 'Learning Material Id',
+                    value: chunk.learningMaterialId,
+                  ),
                 ],
               ),
             ),
@@ -149,17 +156,20 @@ IconButton(
 
           const SizedBox(height: AppSpacing.xl),
 
-ElevatedButton.icon(
-  onPressed: () async {
-    final updated = await context.push('/materials/chunks/edit', extra: chunk);
+          ElevatedButton.icon(
+            onPressed: () async {
+              final updated = await context.push(
+                '/materials/chunks/edit',
+                extra: chunk,
+              );
 
-    if (updated == true && context.mounted) {
-      context.pop(true);
-    }
-  },
-  icon: const Icon(Icons.edit_outlined),
-  label: const Text('Edit Chunk'),
-),
+              if (updated == true && context.mounted) {
+                context.pop(true);
+              }
+            },
+            icon: const Icon(Icons.edit_outlined),
+            label: const Text('Edit Chunk'),
+          ),
         ],
       ),
     );
@@ -169,9 +179,7 @@ ElevatedButton.icon(
 class _SectionTitle extends StatelessWidget {
   final String title;
 
-  const _SectionTitle({
-    required this.title,
-  });
+  const _SectionTitle({required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -189,9 +197,7 @@ class _SectionTitle extends StatelessWidget {
 class _KeywordChip extends StatelessWidget {
   final String label;
 
-  const _KeywordChip({
-    required this.label,
-  });
+  const _KeywordChip({required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -201,7 +207,7 @@ class _KeywordChip extends StatelessWidget {
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.10),
+        color: AppColors.primary.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -220,10 +226,7 @@ class _MetaRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _MetaRow({
-    required this.label,
-    required this.value,
-  });
+  const _MetaRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {

@@ -9,7 +9,6 @@ import 'package:mentorax/features/study_sessions/presentation/providers/session_
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
-import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../dashboard/data/models/next_session_model.dart';
 import '../providers/study_session_providers.dart';
 
@@ -42,9 +41,7 @@ class _CompleteSessionPageState extends ConsumerState<CompleteSessionPage> {
   void initState() {
     super.initState();
 
-    _notesController = TextEditingController(
-      text: widget.initialNotes ?? '',
-    );
+    _notesController = TextEditingController(text: widget.initialNotes ?? '');
 
     final elapsed = widget.elapsedSeconds ?? 0;
 
@@ -114,11 +111,52 @@ class _CompleteSessionPageState extends ConsumerState<CompleteSessionPage> {
   }
 
   Future<void> _completeSession() async {
-    final duration = _durationMinutes();
+    if (_isSubmitting) return;
+
+    final duration = int.tryParse(_durationController.text.trim());
 
     if (duration == null || duration <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid duration')),
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enter a valid duration')));
+      return;
+    }
+
+    final expectedMinutes = widget.session.estimatedMinutes <= 0
+        ? 1
+        : widget.session.estimatedMinutes;
+
+    var minimumRequiredMinutes = (expectedMinutes * 0.5).ceil();
+
+    if (minimumRequiredMinutes > 5) {
+      minimumRequiredMinutes = 5;
+    }
+
+    if (minimumRequiredMinutes < 1) {
+      minimumRequiredMinutes = 1;
+    }
+
+    if (duration < minimumRequiredMinutes) {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Continue studying'),
+            content: Text(
+              'You studied for only $duration minute(s). '
+              'This session is planned for about $expectedMinutes minute(s). '
+              'Please continue a little more before completing it.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                },
+                child: const Text('Go back'),
+              ),
+            ],
+          );
+        },
       );
       return;
     }
@@ -128,7 +166,9 @@ class _CompleteSessionPageState extends ConsumerState<CompleteSessionPage> {
     });
 
     try {
-      await ref.read(sessionDashboardRepositoryProvider).completeSession(
+      await ref
+          .read(sessionDashboardRepositoryProvider)
+          .completeSession(
             sessionId: widget.session.sessionId,
             qualityScore: _qualityScore,
             difficultyScore: _difficultyScore,
@@ -144,27 +184,31 @@ class _CompleteSessionPageState extends ConsumerState<CompleteSessionPage> {
 
       ref.read(sessionTimerProvider.notifier).reset();
 
-      ref.read(appRefreshControllerProvider).refreshAfterSessionCompleted(
+      ref
+          .read(appRefreshControllerProvider)
+          .refreshAfterSessionCompleted(
             materialId: widget.session.materialId,
             planId: widget.session.studyPlanId,
           );
 
       try {
-        final refreshedNextSession = await ref.refresh(nextSessionProvider.future);
+        final refreshedNextSession = await ref.refresh(
+          nextSessionProvider.future,
+        );
         await StudyReminderService.instance.scheduleForNextSession(
           refreshedNextSession,
         );
       } catch (_) {
-        // There may be no next session after completion.
+        // New next session may not exist.
       }
 
       final updatedProgress = await ref.refresh(progressSummaryProvider.future);
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Session completed')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Session completed')));
 
       context.go(
         '/session-success',
@@ -175,21 +219,11 @@ class _CompleteSessionPageState extends ConsumerState<CompleteSessionPage> {
         },
       );
     } catch (e) {
- if (!mounted) return;
+      if (!mounted) return;
 
-  final message = e.toString();
-
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message)),
-  );
-
-  if (message.toLowerCase().contains('plan is no longer active') ||
-      message.toLowerCase().contains('study_plan_not_active')) {
-    ref.read(appRefreshControllerProvider).refreshAfterSessionCompleted();
-    ref.invalidate(nextSessionProvider);
-
-    context.go('/dashboard');
-  }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) {
         setState(() {
@@ -224,9 +258,7 @@ class _CompleteSessionPageState extends ConsumerState<CompleteSessionPage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Complete Session'),
-      ),
+      appBar: AppBar(title: const Text('Complete Session')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -274,7 +306,8 @@ class _CompleteSessionPageState extends ConsumerState<CompleteSessionPage> {
 
             _ScoreCard(
               title: 'How difficult was it?',
-              subtitle: 'Use this to tell the system how heavy this chunk felt.',
+              subtitle:
+                  'Use this to tell the system how heavy this chunk felt.',
               score: _difficultyScore,
               minScore: 1,
               maxScore: 5,
@@ -295,9 +328,7 @@ class _CompleteSessionPageState extends ConsumerState<CompleteSessionPage> {
 
             const SizedBox(height: AppSpacing.md),
 
-            _NotesCard(
-              controller: _notesController,
-            ),
+            _NotesCard(controller: _notesController),
 
             const SizedBox(height: AppSpacing.lg),
 
@@ -309,10 +340,15 @@ class _CompleteSessionPageState extends ConsumerState<CompleteSessionPage> {
 
             const SizedBox(height: AppSpacing.lg),
 
-            AppPrimaryButton(
-              text: 'Complete Session',
+            ElevatedButton(
               onPressed: _isSubmitting ? null : _completeSession,
-              isLoading: _isSubmitting,
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Complete Session'),
             ),
 
             const SizedBox(height: AppSpacing.sm),
@@ -350,7 +386,7 @@ class _HeaderCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: AppColors.success.withOpacity(0.10),
+                color: AppColors.success.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(18),
               ),
               child: const Icon(
@@ -377,9 +413,7 @@ class _HeaderCard extends StatelessWidget {
                     materialTitle,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                    ),
+                    style: const TextStyle(color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Wrap(
@@ -513,7 +547,7 @@ class _ScoreCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
+                color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -563,9 +597,7 @@ class _ScoreCard extends StatelessWidget {
 class _NotesCard extends StatelessWidget {
   final TextEditingController controller;
 
-  const _NotesCard({
-    required this.controller,
-  });
+  const _NotesCard({required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -611,7 +643,7 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: AppColors.primary.withOpacity(0.06),
+      color: AppColors.primary.withValues(alpha: 0.06),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
@@ -632,14 +664,8 @@ class _SummaryCard extends StatelessWidget {
                   ? 'Not set'
                   : '$duration min',
             ),
-            _SummaryRow(
-              label: 'Memory quality',
-              value: qualityLabel,
-            ),
-            _SummaryRow(
-              label: 'Difficulty',
-              value: difficultyLabel,
-            ),
+            _SummaryRow(label: 'Memory quality', value: qualityLabel),
+            _SummaryRow(label: 'Difficulty', value: difficultyLabel),
           ],
         ),
       ),
@@ -663,10 +689,7 @@ class _SectionHeader extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          icon,
-          color: AppColors.primary,
-        ),
+        Icon(icon, color: AppColors.primary),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Column(
@@ -683,9 +706,7 @@ class _SectionHeader extends StatelessWidget {
               const SizedBox(height: AppSpacing.xs),
               Text(
                 subtitle,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                ),
+                style: const TextStyle(color: AppColors.textSecondary),
               ),
             ],
           ),
@@ -699,10 +720,7 @@ class _InfoChip extends StatelessWidget {
   final IconData icon;
   final String label;
 
-  const _InfoChip({
-    required this.icon,
-    required this.label,
-  });
+  const _InfoChip({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -719,11 +737,7 @@ class _InfoChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 16,
-            color: AppColors.textSecondary,
-          ),
+          Icon(icon, size: 16, color: AppColors.textSecondary),
           const SizedBox(width: AppSpacing.xs),
           Text(
             label,
@@ -743,10 +757,7 @@ class _SummaryRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _SummaryRow({
-    required this.label,
-    required this.value,
-  });
+  const _SummaryRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -757,9 +768,7 @@ class _SummaryRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-              ),
+              style: const TextStyle(color: AppColors.textSecondary),
             ),
           ),
           Text(

@@ -35,7 +35,7 @@ class MaterialChunkModel {
     );
   }
 
-  get characterCount => null;
+  int? get characterCount => null;
 
-  get isGeneratedByAI => null;
+  bool? get isGeneratedByAI => null;
 }

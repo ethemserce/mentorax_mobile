@@ -11,19 +11,14 @@ import '../providers/material_providers.dart';
 class MaterialDetailPage extends ConsumerWidget {
   final String materialId;
 
-  const MaterialDetailPage({
-    super.key,
-    required this.materialId,
-  });
+  const MaterialDetailPage({super.key, required this.materialId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final materialAsync = ref.watch(materialDetailProvider(materialId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Material Detail'),
-      ),
+      appBar: AppBar(title: const Text('Material Detail')),
       body: materialAsync.when(
         data: (material) {
           final tags = (material.tags ?? '')
@@ -50,7 +45,7 @@ class MaterialDetailPage extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.all(AppSpacing.md),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.10),
+                            color: AppColors.primary.withValues(alpha: 0.10),
                             borderRadius: BorderRadius.circular(18),
                           ),
                           child: const Icon(
@@ -116,13 +111,15 @@ class MaterialDetailPage extends ConsumerWidget {
                           );
 
                           if (created == true) {
-  ref.invalidate(materialDetailProvider(materialId));
-  ref.invalidate(materialListProvider);
-  ref.invalidate(materialChunksProvider(materialId));
+                            ref.invalidate(materialDetailProvider(materialId));
+                            ref.invalidate(materialListProvider);
+                            ref.invalidate(materialChunksProvider(materialId));
                             ref
                                 .read(appRefreshControllerProvider)
                                 .refreshAfterPlanCreated();
-  await ref.read(materialDetailProvider(materialId).future);
+                            await ref.read(
+                              materialDetailProvider(materialId).future,
+                            );
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -146,8 +143,8 @@ class MaterialDetailPage extends ConsumerWidget {
                           padding: const EdgeInsets.all(AppSpacing.md),
                           decoration: BoxDecoration(
                             color: material.hasActivePlan
-                                ? AppColors.success.withOpacity(0.10)
-                                : AppColors.warning.withOpacity(0.10),
+                                ? AppColors.success.withValues(alpha: 0.10)
+                                : AppColors.warning.withValues(alpha: 0.10),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Icon(
@@ -177,7 +174,7 @@ class MaterialDetailPage extends ConsumerWidget {
                               Text(
                                 material.hasActivePlan
                                     ? (material.activePlanTitle ??
-                                        'This material already has an active plan.')
+                                          'This material already has an active plan.')
                                     : 'Create a study plan to generate sessions for this material.',
                                 style: const TextStyle(
                                   color: AppColors.textSecondary,
@@ -218,9 +215,7 @@ class MaterialDetailPage extends ConsumerWidget {
                       padding: const EdgeInsets.all(AppSpacing.lg),
                       child: Text(
                         material.description!,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                        ),
+                        style: const TextStyle(color: AppColors.textPrimary),
                       ),
                     ),
                   ),
@@ -246,10 +241,7 @@ class MaterialDetailPage extends ConsumerWidget {
         error: (error, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Text(
-              error.toString(),
-              textAlign: TextAlign.center,
-            ),
+            child: Text(error.toString(), textAlign: TextAlign.center),
           ),
         ),
       ),
@@ -293,9 +285,7 @@ class _ActionPanel extends StatelessWidget {
               hasActivePlan
                   ? 'Continue with your active plan or review chunks.'
                   : 'Create a plan or review material chunks first.',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-              ),
+              style: const TextStyle(color: AppColors.textSecondary),
             ),
             if (hasActivePlan && activePlanTitle != null) ...[
               const SizedBox(height: AppSpacing.md),
@@ -303,10 +293,10 @@ class _ActionPanel extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.08),
+                  color: AppColors.success.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: AppColors.success.withOpacity(0.18),
+                    color: AppColors.success.withValues(alpha: 0.18),
                   ),
                 ),
                 child: Row(
@@ -354,7 +344,9 @@ class _ActionPanel extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: AppPrimaryButton(
-                text: hasActivePlan ? 'Plan Already Exists' : 'Create Study Plan',
+                text: hasActivePlan
+                    ? 'Plan Already Exists'
+                    : 'Create Study Plan',
                 onPressed: onCreatePlan,
               ),
             ),
@@ -402,10 +394,7 @@ class _TagChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          fontSize: 12,
-          color: AppColors.textSecondary,
-        ),
+        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
       ),
     );
   }

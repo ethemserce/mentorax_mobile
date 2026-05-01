@@ -12,10 +12,7 @@ import '../../../../core/constants/app_spacing.dart';
 class StudyRoomPage extends ConsumerStatefulWidget {
   final String sessionId;
 
-  const StudyRoomPage({
-    super.key,
-    required this.sessionId,
-  });
+  const StudyRoomPage({super.key, required this.sessionId});
 
   @override
   ConsumerState<StudyRoomPage> createState() => _StudyRoomPageState();
@@ -154,9 +151,7 @@ class _StudyRoomPageState extends ConsumerState<StudyRoomPage>
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Study Room'),
-      ),
+      appBar: AppBar(title: const Text('Study Room')),
       body: sessionAsync.when(
         data: (session) {
           final progress = _progressValue(session.plannedDurationMinutes);
@@ -213,9 +208,7 @@ class _StudyRoomPageState extends ConsumerState<StudyRoomPage>
                                   title: session.chunkTitle,
                                   content: session.chunkContent,
                                 ),
-                                _NotesTab(
-                                  controller: _notesController,
-                                ),
+                                _NotesTab(controller: _notesController),
                                 _SelfCheckTab(
                                   confidenceScore: _confidenceScore,
                                   confidenceLabel: _confidenceLabel,
@@ -287,9 +280,9 @@ class _StudyRoomPageState extends ConsumerState<StudyRoomPage>
                               scheduledAtUtc: session.scheduledAtUtc,
                               startedAtUtc: null,
                               estimatedMinutes: session.plannedDurationMinutes,
-                              isDue: session.scheduledAtUtc
-                                  .toLocal()
-                                  .isBefore(DateTime.now()),
+                              isDue: session.scheduledAtUtc.toLocal().isBefore(
+                                DateTime.now(),
+                              ),
                             ),
                             'notes': _buildCombinedNotes(),
                             'elapsedSeconds': _elapsedSeconds,
@@ -309,10 +302,7 @@ class _StudyRoomPageState extends ConsumerState<StudyRoomPage>
         error: (error, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Text(
-              error.toString(),
-              textAlign: TextAlign.center,
-            ),
+            child: Text(error.toString(), textAlign: TextAlign.center),
           ),
         ),
       ),
@@ -348,7 +338,7 @@ class _StudyHeaderCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.10),
+                color: AppColors.primary.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const Icon(
@@ -376,9 +366,7 @@ class _StudyHeaderCard extends StatelessWidget {
                     planTitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                    ),
+                    style: const TextStyle(color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Wrap(
@@ -405,10 +393,7 @@ class _ContentTab extends StatelessWidget {
   final String? title;
   final String? content;
 
-  const _ContentTab({
-    required this.title,
-    required this.content,
-  });
+  const _ContentTab({required this.title, required this.content});
 
   @override
   Widget build(BuildContext context) {
@@ -462,9 +447,7 @@ class _ContentTab extends StatelessWidget {
 class _NotesTab extends StatelessWidget {
   final TextEditingController controller;
 
-  const _NotesTab({
-    required this.controller,
-  });
+  const _NotesTab({required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -484,9 +467,7 @@ class _NotesTab extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           const Text(
             'Write what you understood or found difficult.',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(color: AppColors.textSecondary),
           ),
           const SizedBox(height: AppSpacing.md),
           Expanded(
@@ -562,9 +543,7 @@ class _SelfCheckTab extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           const Text(
             'Quickly mark how well you understood this chunk.',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(color: AppColors.textSecondary),
           ),
           const SizedBox(height: AppSpacing.lg),
           Row(
@@ -717,9 +696,7 @@ class _CompactTimerPanel extends StatelessWidget {
 class _SmallChip extends StatelessWidget {
   final String label;
 
-  const _SmallChip({
-    required this.label,
-  });
+  const _SmallChip({required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -729,7 +706,7 @@ class _SmallChip extends StatelessWidget {
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
+        color: AppColors.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(

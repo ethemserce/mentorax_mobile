@@ -61,7 +61,7 @@ class SessionSuccessPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.xl),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.10),
+                  color: AppColors.success.withValues(alpha: 0.10),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -119,9 +119,7 @@ class SessionSuccessPage extends StatelessWidget {
 
               const SizedBox(height: AppSpacing.md),
 
-              _StreakCard(
-                streakDays: streakDays,
-              ),
+              _StreakCard(streakDays: streakDays),
 
               const Spacer(),
 
@@ -174,11 +172,7 @@ class _StatCard extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           children: [
-            Icon(
-              icon,
-              color: AppColors.primary,
-              size: 30,
-            ),
+            Icon(icon, color: AppColors.primary, size: 30),
             const SizedBox(height: AppSpacing.sm),
             Text(
               value,
@@ -208,9 +202,7 @@ class _StatCard extends StatelessWidget {
 class _StreakCard extends StatelessWidget {
   final int streakDays;
 
-  const _StreakCard({
-    required this.streakDays,
-  });
+  const _StreakCard({required this.streakDays});
 
   @override
   Widget build(BuildContext context) {
@@ -224,7 +216,7 @@ class _StreakCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: AppColors.warning.withOpacity(0.12),
+                color: AppColors.warning.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const Icon(

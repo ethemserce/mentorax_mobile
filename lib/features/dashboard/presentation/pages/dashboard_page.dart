@@ -27,7 +27,9 @@ class DashboardPage extends ConsumerWidget {
               final created = await context.push('/materials/create');
 
               if (created == true) {
-                ref.read(appRefreshControllerProvider).refreshAfterMaterialCreated();
+                ref
+                    .read(appRefreshControllerProvider)
+                    .refreshAfterMaterialCreated();
               }
             },
             icon: const Icon(Icons.add_box_outlined),
@@ -53,10 +55,7 @@ class DashboardPage extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.lg),
                 const Text(
                   'Today Overview',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Row(
@@ -81,70 +80,69 @@ class DashboardPage extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.lg),
                 const Text(
                   'Next Session',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: AppSpacing.lg),
 
-const Text(
-  'Recent Materials',
-  style: TextStyle(
-    fontSize: 20,
-    fontWeight: FontWeight.bold,
-  ),
-),
+                const Text(
+                  'Recent Materials',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
 
-const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: AppSpacing.md),
 
-materialsAsync.when(
-  data: (materials) {
-    if (materials.isEmpty) {
-      return const _EmptyStateCard(
-        title: 'No materials yet',
-        subtitle: 'Create your first material to start learning.',
-        icon: Icons.menu_book_outlined,
-      );
-    }
+                materialsAsync.when(
+                  data: (materials) {
+                    if (materials.isEmpty) {
+                      return const _EmptyStateCard(
+                        title: 'No materials yet',
+                        subtitle:
+                            'Create your first material to start learning.',
+                        icon: Icons.menu_book_outlined,
+                      );
+                    }
 
-    final recentMaterials = materials.take(3).toList();
+                    final recentMaterials = materials.take(3).toList();
 
-    return Column(
-      children: recentMaterials.map((material) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.md),
-          child: _RecentMaterialCard(
-            title: material.title,
-            materialType: material.materialType,
-            durationMinutes: material.estimatedDurationMinutes,
-            hasActivePlan: material.hasActivePlan,
-            onTap: () {
-              context.push('/materials/detail', extra: material.id);
-            },
-          ),
-        );
-      }).toList(),
-    );
-  },
-  loading: () => const Card(
-    child: Padding(
-      padding: EdgeInsets.all(AppSpacing.lg),
-      child: Center(child: CircularProgressIndicator()),
-    ),
-  ),
-  error: (error, _) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Text(error.toString()),
-    ),
-  ),
-),
+                    return Column(
+                      children: recentMaterials.map((material) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                          child: _RecentMaterialCard(
+                            title: material.title,
+                            materialType: material.materialType,
+                            durationMinutes: material.estimatedDurationMinutes,
+                            hasActivePlan: material.hasActivePlan,
+                            onTap: () {
+                              context.push(
+                                '/materials/detail',
+                                extra: material.id,
+                              );
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
+                  loading: () => const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(AppSpacing.lg),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  ),
+                  error: (error, _) => Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Text(error.toString()),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: AppSpacing.md),
                 if (dashboard.nextSession == null)
                   const _EmptyStateCard(
                     title: 'No session available',
-                    subtitle: 'Create a material and study plan to get started.',
+                    subtitle:
+                        'Create a material and study plan to get started.',
                     icon: Icons.event_note_outlined,
                   )
                 else
@@ -153,16 +151,24 @@ materialsAsync.when(
                     estimatedMinutes: dashboard.nextSession!.estimatedMinutes,
                     isDue: dashboard.nextSession!.isDue,
                     onTap: () {
+                      if (!dashboard.nextSession!.isDue) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'This session is scheduled for later.',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+
                       context.go('/next-session');
                     },
                   ),
                 const SizedBox(height: AppSpacing.lg),
                 const Text(
                   'Weak Materials',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 if (dashboard.weakMaterials.isEmpty)
@@ -178,7 +184,9 @@ materialsAsync.when(
                       child: _WeakMaterialCard(
                         title: item.title,
                         performanceLevel: item.performanceLevel,
-                        nextReviewText: item.nextReviewAtUtc.toLocal().toString(),
+                        nextReviewText: item.nextReviewAtUtc
+                            .toLocal()
+                            .toString(),
                       ),
                     ),
                   ),
@@ -190,10 +198,7 @@ materialsAsync.when(
         error: (error, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Text(
-              error.toString(),
-              textAlign: TextAlign.center,
-            ),
+            child: Text(error.toString(), textAlign: TextAlign.center),
           ),
         ),
       ),
@@ -227,10 +232,7 @@ class _HeroCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         gradient: const LinearGradient(
-          colors: [
-            AppColors.primary,
-            AppColors.secondary,
-          ],
+          colors: [AppColors.primary, AppColors.secondary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -240,10 +242,7 @@ class _HeroCard extends StatelessWidget {
         children: [
           const Text(
             'Keep going',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.white70, fontSize: 14),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
@@ -267,9 +266,7 @@ class _HeroCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Text(
             '$todayCompletedMinutes / $todayPlannedMinutes min completed',
-            style: const TextStyle(
-              color: Colors.white,
-            ),
+            style: const TextStyle(color: Colors.white),
           ),
           const SizedBox(height: AppSpacing.md),
           Column(
@@ -357,12 +354,7 @@ class _InfoCard extends StatelessWidget {
           children: [
             Icon(icon, color: AppColors.primary),
             const SizedBox(height: AppSpacing.sm),
-            Text(
-              title,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-              ),
-            ),
+            Text(title, style: const TextStyle(color: AppColors.textSecondary)),
             const SizedBox(height: AppSpacing.xs),
             Text(
               value,
@@ -405,13 +397,14 @@ class _NextSessionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  // ignore: deprecated_member_use
-                  color: AppColors.primary.withOpacity(0.12),
+                  color: isDue
+                      ? AppColors.primary.withValues(alpha: 0.12)
+                      : Colors.grey.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(
-                  Icons.play_arrow_rounded,
-                  color: AppColors.primary,
+                child: Icon(
+                  isDue ? Icons.play_arrow_rounded : Icons.lock_clock_outlined,
+                  color: isDue ? AppColors.primary : AppColors.textSecondary,
                   size: 32,
                 ),
               ),
@@ -430,15 +423,19 @@ class _NextSessionCard extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      '$estimatedMinutes min • ${isDue ? "Due now" : "Upcoming"}',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                      ),
+                      isDue
+                          ? 'Ready now - $estimatedMinutes min'
+                          : 'Scheduled for later - $estimatedMinutes min',
+                      style: const TextStyle(color: AppColors.textSecondary),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios, size: 18),
+              Icon(
+                isDue ? Icons.arrow_forward_ios : Icons.info_outline,
+                size: 18,
+                color: isDue ? AppColors.textPrimary : AppColors.textSecondary,
+              ),
             ],
           ),
         ),
@@ -487,10 +484,8 @@ class _WeakMaterialCard extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    '$performanceLevel • Next review: $nextReviewText',
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                    ),
+                    '$performanceLevel - Next review: $nextReviewText',
+                    style: const TextStyle(color: AppColors.textSecondary),
                   ),
                 ],
               ),
@@ -533,9 +528,7 @@ class _EmptyStateCard extends StatelessWidget {
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-              ),
+              style: const TextStyle(color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -572,7 +565,7 @@ class _RecentMaterialCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.10),
+                  color: AppColors.primary.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Icon(
@@ -598,19 +591,14 @@ class _RecentMaterialCard extends StatelessWidget {
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       '$materialType • $durationMinutes min',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                      ),
+                      style: const TextStyle(color: AppColors.textSecondary),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               if (hasActivePlan)
-                const Icon(
-                  Icons.check_circle_outline,
-                  color: AppColors.success,
-                )
+                const Icon(Icons.check_circle_outline, color: AppColors.success)
               else
                 const Icon(
                   Icons.add_circle_outline,
