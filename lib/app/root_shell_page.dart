@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mentorax/core/sync/widgets/sync_lifecycle_listener.dart';
 
 class RootShellPage extends StatelessWidget {
   final Widget child;
 
-  const RootShellPage({
-    super.key,
-    required this.child,
-  });
+  const RootShellPage({super.key, required this.child});
 
   int _calculateSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
@@ -42,7 +40,7 @@ class RootShellPage extends StatelessWidget {
     final selectedIndex = _calculateSelectedIndex(context);
 
     return Scaffold(
-      body: child,
+      body: SyncLifecycleListener(child: child),
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedIndex,
         onDestinationSelected: (index) => _onItemTapped(context, index),
