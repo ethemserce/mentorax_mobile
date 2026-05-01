@@ -175,11 +175,21 @@ class _CompleteSessionPageState extends ConsumerState<CompleteSessionPage> {
         },
       );
     } catch (e) {
-      if (!mounted) return;
+ if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+  final message = e.toString();
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(message)),
+  );
+
+  if (message.toLowerCase().contains('plan is no longer active') ||
+      message.toLowerCase().contains('study_plan_not_active')) {
+    ref.read(appRefreshControllerProvider).refreshAfterSessionCompleted();
+    ref.invalidate(nextSessionProvider);
+
+    context.go('/dashboard');
+  }
     } finally {
       if (mounted) {
         setState(() {
