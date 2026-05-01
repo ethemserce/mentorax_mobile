@@ -22,7 +22,9 @@ class MobileDashboardModel {
       todayPlannedMinutes: json['todayPlannedMinutes'] as int,
       todayCompletedMinutes: json['todayCompletedMinutes'] as int,
       nextSession: json['nextSession'] != null
-          ? NextSessionModel.fromJson(json['nextSession'] as Map<String, dynamic>)
+          ? NextSessionModel.fromJson(
+              json['nextSession'] as Map<String, dynamic>,
+            )
           : null,
       weakMaterials: (json['weakMaterials'] as List<dynamic>)
           .map((e) => WeakMaterialModel.fromJson(e as Map<String, dynamic>))

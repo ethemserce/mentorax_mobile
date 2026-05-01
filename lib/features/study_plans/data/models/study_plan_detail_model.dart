@@ -47,21 +47,22 @@ class StudyPlanDetailModel {
       dailyTargetMinutes: json['dailyTargetMinutes'] as int,
       status: json['status'] as String,
       sessions: (json['sessions'] as List<dynamic>)
-          .map((e) => StudyPlanDetailSessionModel.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) =>
+                StudyPlanDetailSessionModel.fromJson(e as Map<String, dynamic>),
+          )
           .toList(),
       items: ((json['items'] as List?) ?? [])
           .map((x) => StudyPlanItemModel.fromJson(x as Map<String, dynamic>))
-          .toList()
+          .toList(),
     );
   }
 
   StudyPlanDetailSessionModel? get nextPendingSession {
-  final pending = sessions
-      .where((x) => x.completedAtUtc == null)
-      .toList()
-    ..sort((a, b) => a.scheduledAtUtc.compareTo(b.scheduledAtUtc));
+    final pending = sessions.where((x) => x.completedAtUtc == null).toList()
+      ..sort((a, b) => a.scheduledAtUtc.compareTo(b.scheduledAtUtc));
 
-  if (pending.isEmpty) return null;
-  return pending.first;
-}
+    if (pending.isEmpty) return null;
+    return pending.first;
+  }
 }

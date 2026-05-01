@@ -16,10 +16,7 @@ import '../providers/study_plan_providers.dart';
 class CreatePlanPage extends ConsumerStatefulWidget {
   final String materialId;
 
-  const CreatePlanPage({
-    super.key,
-    required this.materialId,
-  });
+  const CreatePlanPage({super.key, required this.materialId});
 
   @override
   ConsumerState<CreatePlanPage> createState() => _CreatePlanPageState();
@@ -63,7 +60,9 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
 
     if (_preferredHour < 0 || _preferredHour > 23) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preferred hour must be between 0 and 23')),
+        const SnackBar(
+          content: Text('Preferred hour must be between 0 and 23'),
+        ),
       );
       return;
     }
@@ -95,10 +94,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
         return;
       }
 
-      final dayOffsets = List.generate(
-        chunks.length,
-        (index) => index,
-      );
+      final dayOffsets = List.generate(chunks.length, (index) => index);
 
       final request = CreateStudyPlanRequest(
         learningMaterialId: widget.materialId,
@@ -110,35 +106,38 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
         dayOffsets: dayOffsets,
       );
 
-      final createdPlan = await ref.read(studyPlanServiceProvider).createPlan(
-            request,
-          );
+      final createdPlan = await ref
+          .read(studyPlanRepositoryProvider)
+          .createPlan(request);
 
-      final detail = await ref.read(studyPlanServiceProvider).getPlanById(
-            createdPlan.id,
-          );
+      final detail = await ref
+          .read(studyPlanRepositoryProvider)
+          .getPlanById(createdPlan.id);
 
       await StudyReminderService.instance.rescheduleFromPlanDetail(
         detail,
-        onDebug: ({
-          required action,
-          sessionId,
-          planId,
-          sessionTime,
-          reminderTime,
-          message,
-        }) {
-          ref.read(reminderDebugProvider.notifier).update(
-                ReminderDebugState(
-                  lastAction: action,
-                  sessionId: sessionId,
-                  planId: planId,
-                  sessionTime: sessionTime,
-                  reminderTime: reminderTime,
-                  message: message,
-                ),
-              );
-        },
+        onDebug:
+            ({
+              required action,
+              sessionId,
+              planId,
+              sessionTime,
+              reminderTime,
+              message,
+            }) {
+              ref
+                  .read(reminderDebugProvider.notifier)
+                  .update(
+                    ReminderDebugState(
+                      lastAction: action,
+                      sessionId: sessionId,
+                      planId: planId,
+                      sessionTime: sessionTime,
+                      reminderTime: reminderTime,
+                      message: message,
+                    ),
+                  );
+            },
       );
 
       if (!mounted) return;
@@ -150,9 +149,9 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
       ref.invalidate(materialChunksProvider(widget.materialId));
       ref.invalidate(studyPlansProvider);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Plan created')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Plan created')));
 
       Navigator.of(context).pop(true);
     } catch (e) {
@@ -173,9 +172,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
     final chunksAsync = ref.watch(materialChunksProvider(widget.materialId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Study Plan'),
-      ),
+      appBar: AppBar(title: const Text('Create Study Plan')),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
@@ -196,9 +193,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
                   SizedBox(height: AppSpacing.sm),
                   Text(
                     'MentoraX will create sessions from your material chunks.',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                    ),
+                    style: TextStyle(color: AppColors.textSecondary),
                   ),
                 ],
               ),
@@ -207,10 +202,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
 
           const SizedBox(height: AppSpacing.lg),
 
-          AppTextField(
-            controller: _titleController,
-            label: 'Plan Title',
-          ),
+          AppTextField(controller: _titleController, label: 'Plan Title'),
 
           const SizedBox(height: AppSpacing.md),
 
@@ -224,9 +216,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
 
           DropdownButtonFormField<int>(
             initialValue: _preferredHour,
-            decoration: const InputDecoration(
-              labelText: 'Preferred Hour',
-            ),
+            decoration: const InputDecoration(labelText: 'Preferred Hour'),
             items: List.generate(
               24,
               (index) => DropdownMenuItem(
@@ -247,9 +237,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
 
           DropdownButtonFormField<int>(
             initialValue: _preferredMinute,
-            decoration: const InputDecoration(
-              labelText: 'Preferred Minute',
-            ),
+            decoration: const InputDecoration(labelText: 'Preferred Minute'),
             items: List.generate(
               60,
               (index) => DropdownMenuItem(
@@ -271,10 +259,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
           const Text(
             'The first session will be scheduled for today at the selected time. '
             'Other chunks will be scheduled on following days.',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-            ),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
           ),
 
           const SizedBox(height: AppSpacing.lg),
@@ -303,9 +288,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
                         SizedBox(height: AppSpacing.sm),
                         Text(
                           'Go back to Material Detail and create at least one chunk before creating a plan.',
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                          ),
+                          style: TextStyle(color: AppColors.textSecondary),
                         ),
                       ],
                     ),
@@ -439,10 +422,7 @@ class _SectionTitle extends StatelessWidget {
   final String title;
   final String? subtitle;
 
-  const _SectionTitle({
-    required this.title,
-    this.subtitle,
-  });
+  const _SectionTitle({required this.title, this.subtitle});
 
   @override
   Widget build(BuildContext context) {
@@ -463,9 +443,7 @@ class _SectionTitle extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               subtitle!,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-              ),
+              style: const TextStyle(color: AppColors.textSecondary),
             ),
           ],
         ],

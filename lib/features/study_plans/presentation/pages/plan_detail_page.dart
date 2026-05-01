@@ -12,10 +12,7 @@ import '../providers/study_plan_providers.dart';
 class PlanDetailPage extends ConsumerWidget {
   final String planId;
 
-  const PlanDetailPage({
-    super.key,
-    required this.planId,
-  });
+  const PlanDetailPage({super.key, required this.planId});
 
   String _formatDateTime(DateTime dateTime) {
     final local = dateTime.toLocal();
@@ -75,67 +72,83 @@ class PlanDetailPage extends ConsumerWidget {
                         isCancelled: isCancelled,
                         isCompleted: isCompleted,
                         isPaused: isPaused,
-onPause: () async {
-  await ref.read(studyPlanServiceProvider).pausePlan(plan.id);
+                        onPause: () async {
+                          await ref
+                              .read(studyPlanRepositoryProvider)
+                              .pausePlan(plan.id);
 
-  ref.read(appRefreshControllerProvider).refreshAfterPlanChanged(
-        materialId: plan.learningMaterialId,
-        planId: plan.id,
-      );
-},
-onResume: () async {
-  await ref.read(studyPlanServiceProvider).resumePlan(plan.id);
+                          ref
+                              .read(appRefreshControllerProvider)
+                              .refreshAfterPlanChanged(
+                                materialId: plan.learningMaterialId,
+                                planId: plan.id,
+                              );
+                        },
+                        onResume: () async {
+                          await ref
+                              .read(studyPlanRepositoryProvider)
+                              .resumePlan(plan.id);
 
-  ref.read(appRefreshControllerProvider).refreshAfterPlanChanged(
-        materialId: plan.learningMaterialId,
-        planId: plan.id,
-      );
-},
-onComplete: () async {
-  final confirmed = await showAppConfirmDialog(
-    context: context,
-    title: 'Complete Plan',
-    message:
-        'Are you sure you want to complete this plan? Unfinished items will be marked as cancelled.',
-    confirmText: 'Complete',
-  );
+                          ref
+                              .read(appRefreshControllerProvider)
+                              .refreshAfterPlanChanged(
+                                materialId: plan.learningMaterialId,
+                                planId: plan.id,
+                              );
+                        },
+                        onComplete: () async {
+                          final confirmed = await showAppConfirmDialog(
+                            context: context,
+                            title: 'Complete Plan',
+                            message:
+                                'Are you sure you want to complete this plan? Unfinished items will be marked as cancelled.',
+                            confirmText: 'Complete',
+                          );
 
-  if (!confirmed) return;
+                          if (!confirmed) return;
 
-  await ref.read(studyPlanServiceProvider).completePlan(plan.id);
+                          await ref
+                              .read(studyPlanRepositoryProvider)
+                              .completePlan(plan.id);
 
-  ref.read(appRefreshControllerProvider).refreshAfterPlanChanged(
-        materialId: plan.learningMaterialId,
-        planId: plan.id,
-      );
+                          ref
+                              .read(appRefreshControllerProvider)
+                              .refreshAfterPlanChanged(
+                                materialId: plan.learningMaterialId,
+                                planId: plan.id,
+                              );
 
-  if (!context.mounted) return;
+                          if (!context.mounted) return;
 
-  showSuccessSnackBar(context, 'Plan completed');
-},
-onCancel: () async {
-  final confirmed = await showAppConfirmDialog(
-    context: context,
-    title: 'Cancel Plan',
-    message:
-        'Are you sure you want to cancel this plan? This action will stop future sessions for this plan.',
-    confirmText: 'Cancel Plan',
-    isDanger: true,
-  );
+                          showSuccessSnackBar(context, 'Plan completed');
+                        },
+                        onCancel: () async {
+                          final confirmed = await showAppConfirmDialog(
+                            context: context,
+                            title: 'Cancel Plan',
+                            message:
+                                'Are you sure you want to cancel this plan? This action will stop future sessions for this plan.',
+                            confirmText: 'Cancel Plan',
+                            isDanger: true,
+                          );
 
-  if (!confirmed) return;
+                          if (!confirmed) return;
 
-  await ref.read(studyPlanServiceProvider).cancelPlan(plan.id);
+                          await ref
+                              .read(studyPlanRepositoryProvider)
+                              .cancelPlan(plan.id);
 
-  ref.read(appRefreshControllerProvider).refreshAfterPlanChanged(
-        materialId: plan.learningMaterialId,
-        planId: plan.id,
-      );
+                          ref
+                              .read(appRefreshControllerProvider)
+                              .refreshAfterPlanChanged(
+                                materialId: plan.learningMaterialId,
+                                planId: plan.id,
+                              );
 
-  if (!context.mounted) return;
+                          if (!context.mounted) return;
 
-  showSuccessSnackBar(context, 'Plan cancelled');
-},
+                          showSuccessSnackBar(context, 'Plan cancelled');
+                        },
                       ),
                     ],
                   ),
@@ -154,8 +167,12 @@ onCancel: () async {
                         ...plan.sessions.map(
                           (session) => _SessionCard(
                             title: 'Session ${session.sequenceNumber}',
-                            status: session.isCompleted ? 'Completed' : 'Pending',
-                            scheduledAt: _formatDateTime(session.scheduledAtUtc),
+                            status: session.isCompleted
+                                ? 'Completed'
+                                : 'Pending',
+                            scheduledAt: _formatDateTime(
+                              session.scheduledAtUtc,
+                            ),
                             plannedDurationMinutes:
                                 session.plannedDurationMinutes,
                             completedAt: session.completedAtUtc == null
@@ -193,10 +210,7 @@ onCancel: () async {
           error: (error, _) => Center(
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Text(
-                error.toString(),
-                textAlign: TextAlign.center,
-              ),
+              child: Text(error.toString(), textAlign: TextAlign.center),
             ),
           ),
         ),
@@ -267,8 +281,8 @@ class _OverviewCard extends StatelessWidget {
                 color: isActive
                     ? AppColors.success
                     : isCancelled
-                        ? AppColors.warning
-                        : AppColors.textSecondary,
+                    ? AppColors.warning
+                    : AppColors.textSecondary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -480,9 +494,7 @@ class _SessionCard extends StatelessWidget {
 class _StudyPlanItemCard extends StatelessWidget {
   final StudyPlanItemModel item;
 
-  const _StudyPlanItemCard({
-    required this.item,
-  });
+  const _StudyPlanItemCard({required this.item});
 
   String _formatDateTime(DateTime value) {
     final local = value.toLocal();
@@ -520,9 +532,7 @@ class _StudyPlanItemCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  child: Text(item.orderNo.toString()),
-                ),
+                CircleAvatar(child: Text(item.orderNo.toString())),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
@@ -530,9 +540,8 @@ class _StudyPlanItemCard extends StatelessWidget {
                     children: [
                       Text(
                         item.title,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
@@ -549,9 +558,9 @@ class _StudyPlanItemCard extends StatelessWidget {
             if (chunk != null) ...[
               Text(
                 'Material Chunk',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
@@ -607,10 +616,7 @@ class _DetailMiniStat extends StatelessWidget {
   final String label;
   final String value;
 
-  const _DetailMiniStat({
-    required this.label,
-    required this.value,
-  });
+  const _DetailMiniStat({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -643,10 +649,7 @@ class _StatusPill extends StatelessWidget {
   final String label;
   final Color color;
 
-  const _StatusPill({
-    required this.label,
-    required this.color,
-  });
+  const _StatusPill({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -676,10 +679,7 @@ class _StatusInfoBox extends StatelessWidget {
   final String message;
   final Color color;
 
-  const _StatusInfoBox({
-    required this.message,
-    required this.color,
-  });
+  const _StatusInfoBox({required this.message, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -693,10 +693,7 @@ class _StatusInfoBox extends StatelessWidget {
       ),
       child: Text(
         message,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.w600,
-        ),
+        style: TextStyle(color: color, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -705,9 +702,7 @@ class _StatusInfoBox extends StatelessWidget {
 class _EmptyState extends StatelessWidget {
   final String message;
 
-  const _EmptyState({
-    required this.message,
-  });
+  const _EmptyState({required this.message});
 
   @override
   Widget build(BuildContext context) {

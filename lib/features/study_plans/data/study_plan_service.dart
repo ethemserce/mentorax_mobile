@@ -8,34 +8,34 @@ import 'models/study_plan_detail_model.dart';
 class StudyPlanService {
   final Dio _dio = DioClient.dio;
 
-Future<StudyPlanModel> createPlan(CreateStudyPlanRequest request) async {
-  try {
-    final response = await _dio.post(
-      '/api/study-plans',
-      data: request.toJson(),
-    );
+  Future<StudyPlanModel> createPlan(CreateStudyPlanRequest request) async {
+    try {
+      final response = await _dio.post(
+        '/api/study-plans',
+        data: request.toJson(),
+      );
 
-    return StudyPlanModel.fromJson(response.data as Map<String, dynamic>);
-  } on DioException catch (e) {
-    throw _mapDioException(e);
+      return StudyPlanModel.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _mapDioException(e);
+    }
   }
-}
 
   Future<void> pausePlan(String id) async {
-  await _dio.post('/api/study-plans/$id/pause');
-}
+    await _dio.post('/api/study-plans/$id/pause');
+  }
 
-Future<void> resumePlan(String id) async {
-  await _dio.post('/api/study-plans/$id/resume');
-}
+  Future<void> resumePlan(String id) async {
+    await _dio.post('/api/study-plans/$id/resume');
+  }
 
-Future<void> cancelPlan(String id) async {
-  await _dio.post('/api/study-plans/$id/cancel');
-}
+  Future<void> cancelPlan(String id) async {
+    await _dio.post('/api/study-plans/$id/cancel');
+  }
 
-Future<void> completePlan(String id) async {
-  await _dio.post('/api/study-plans/$id/complete');
-}
+  Future<void> completePlan(String id) async {
+    await _dio.post('/api/study-plans/$id/complete');
+  }
 
   Future<List<StudyPlanModel>> getPlans() async {
     try {
@@ -51,15 +51,17 @@ Future<void> completePlan(String id) async {
   }
 
   Future<StudyPlanDetailModel> getPlanById(String planId) async {
-  try {
-    final response = await _dio.get('/api/study-plans/$planId');
-    return StudyPlanDetailModel.fromJson(response.data as Map<String, dynamic>);
-  } on DioException catch (e) {
-    throw _mapDioException(e);
+    try {
+      final response = await _dio.get('/api/study-plans/$planId');
+      return StudyPlanDetailModel.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw _mapDioException(e);
+    }
   }
-}
 
-ApiException _mapDioException(DioException e) {
-  return ApiException.fromDioException(e);
-}
+  ApiException _mapDioException(DioException e) {
+    return ApiException.fromDioException(e);
+  }
 }

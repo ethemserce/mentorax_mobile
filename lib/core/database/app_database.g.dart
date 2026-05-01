@@ -3259,6 +3259,17 @@ class $LocalStudySessionsTable extends LocalStudySessions
         type: DriftSqlType.string,
         requiredDuringInsert: true,
       );
+  static const VerificationMeta _materialTitleMeta = const VerificationMeta(
+    'materialTitle',
+  );
+  @override
+  late final GeneratedColumn<String> materialTitle = GeneratedColumn<String>(
+    'material_title',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
   @override
   late final GeneratedColumn<String> userId = GeneratedColumn<String>(
@@ -3335,6 +3346,17 @@ class $LocalStudySessionsTable extends LocalStudySessions
   @override
   late final GeneratedColumn<int> sequenceNumber = GeneratedColumn<int>(
     'sequence_number',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _plannedDurationMinutesMeta =
+      const VerificationMeta('plannedDurationMinutes');
+  @override
+  late final GeneratedColumn<int> plannedDurationMinutes = GeneratedColumn<int>(
+    'planned_duration_minutes',
     aliasedName,
     false,
     type: DriftSqlType.int,
@@ -3438,6 +3460,7 @@ class $LocalStudySessionsTable extends LocalStudySessions
     studyPlanId,
     studyPlanItemId,
     learningMaterialId,
+    materialTitle,
     userId,
     studyProgressId,
     scheduledAtUtc,
@@ -3445,6 +3468,7 @@ class $LocalStudySessionsTable extends LocalStudySessions
     completedAtUtc,
     isCompleted,
     sequenceNumber,
+    plannedDurationMinutes,
     qualityScore,
     difficultyScore,
     actualDurationMinutes,
@@ -3501,6 +3525,15 @@ class $LocalStudySessionsTable extends LocalStudySessions
       );
     } else if (isInserting) {
       context.missing(_learningMaterialIdMeta);
+    }
+    if (data.containsKey('material_title')) {
+      context.handle(
+        _materialTitleMeta,
+        materialTitle.isAcceptableOrUnknown(
+          data['material_title']!,
+          _materialTitleMeta,
+        ),
+      );
     }
     if (data.containsKey('user_id')) {
       context.handle(
@@ -3561,6 +3594,15 @@ class $LocalStudySessionsTable extends LocalStudySessions
         sequenceNumber.isAcceptableOrUnknown(
           data['sequence_number']!,
           _sequenceNumberMeta,
+        ),
+      );
+    }
+    if (data.containsKey('planned_duration_minutes')) {
+      context.handle(
+        _plannedDurationMinutesMeta,
+        plannedDurationMinutes.isAcceptableOrUnknown(
+          data['planned_duration_minutes']!,
+          _plannedDurationMinutesMeta,
         ),
       );
     }
@@ -3652,6 +3694,10 @@ class $LocalStudySessionsTable extends LocalStudySessions
         DriftSqlType.string,
         data['${effectivePrefix}learning_material_id'],
       )!,
+      materialTitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}material_title'],
+      ),
       userId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}user_id'],
@@ -3679,6 +3725,10 @@ class $LocalStudySessionsTable extends LocalStudySessions
       sequenceNumber: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}sequence_number'],
+      )!,
+      plannedDurationMinutes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}planned_duration_minutes'],
       )!,
       qualityScore: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -3727,6 +3777,7 @@ class LocalStudySession extends DataClass
   final String studyPlanId;
   final String? studyPlanItemId;
   final String learningMaterialId;
+  final String? materialTitle;
   final String? userId;
   final String? studyProgressId;
   final DateTime scheduledAtUtc;
@@ -3734,6 +3785,7 @@ class LocalStudySession extends DataClass
   final DateTime? completedAtUtc;
   final bool isCompleted;
   final int sequenceNumber;
+  final int plannedDurationMinutes;
   final int? qualityScore;
   final int? difficultyScore;
   final int? actualDurationMinutes;
@@ -3747,6 +3799,7 @@ class LocalStudySession extends DataClass
     required this.studyPlanId,
     this.studyPlanItemId,
     required this.learningMaterialId,
+    this.materialTitle,
     this.userId,
     this.studyProgressId,
     required this.scheduledAtUtc,
@@ -3754,6 +3807,7 @@ class LocalStudySession extends DataClass
     this.completedAtUtc,
     required this.isCompleted,
     required this.sequenceNumber,
+    required this.plannedDurationMinutes,
     this.qualityScore,
     this.difficultyScore,
     this.actualDurationMinutes,
@@ -3772,6 +3826,9 @@ class LocalStudySession extends DataClass
       map['study_plan_item_id'] = Variable<String>(studyPlanItemId);
     }
     map['learning_material_id'] = Variable<String>(learningMaterialId);
+    if (!nullToAbsent || materialTitle != null) {
+      map['material_title'] = Variable<String>(materialTitle);
+    }
     if (!nullToAbsent || userId != null) {
       map['user_id'] = Variable<String>(userId);
     }
@@ -3787,6 +3844,7 @@ class LocalStudySession extends DataClass
     }
     map['is_completed'] = Variable<bool>(isCompleted);
     map['sequence_number'] = Variable<int>(sequenceNumber);
+    map['planned_duration_minutes'] = Variable<int>(plannedDurationMinutes);
     if (!nullToAbsent || qualityScore != null) {
       map['quality_score'] = Variable<int>(qualityScore);
     }
@@ -3816,6 +3874,9 @@ class LocalStudySession extends DataClass
           ? const Value.absent()
           : Value(studyPlanItemId),
       learningMaterialId: Value(learningMaterialId),
+      materialTitle: materialTitle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(materialTitle),
       userId: userId == null && nullToAbsent
           ? const Value.absent()
           : Value(userId),
@@ -3831,6 +3892,7 @@ class LocalStudySession extends DataClass
           : Value(completedAtUtc),
       isCompleted: Value(isCompleted),
       sequenceNumber: Value(sequenceNumber),
+      plannedDurationMinutes: Value(plannedDurationMinutes),
       qualityScore: qualityScore == null && nullToAbsent
           ? const Value.absent()
           : Value(qualityScore),
@@ -3864,6 +3926,7 @@ class LocalStudySession extends DataClass
       learningMaterialId: serializer.fromJson<String>(
         json['learningMaterialId'],
       ),
+      materialTitle: serializer.fromJson<String?>(json['materialTitle']),
       userId: serializer.fromJson<String?>(json['userId']),
       studyProgressId: serializer.fromJson<String?>(json['studyProgressId']),
       scheduledAtUtc: serializer.fromJson<DateTime>(json['scheduledAtUtc']),
@@ -3871,6 +3934,9 @@ class LocalStudySession extends DataClass
       completedAtUtc: serializer.fromJson<DateTime?>(json['completedAtUtc']),
       isCompleted: serializer.fromJson<bool>(json['isCompleted']),
       sequenceNumber: serializer.fromJson<int>(json['sequenceNumber']),
+      plannedDurationMinutes: serializer.fromJson<int>(
+        json['plannedDurationMinutes'],
+      ),
       qualityScore: serializer.fromJson<int?>(json['qualityScore']),
       difficultyScore: serializer.fromJson<int?>(json['difficultyScore']),
       actualDurationMinutes: serializer.fromJson<int?>(
@@ -3891,6 +3957,7 @@ class LocalStudySession extends DataClass
       'studyPlanId': serializer.toJson<String>(studyPlanId),
       'studyPlanItemId': serializer.toJson<String?>(studyPlanItemId),
       'learningMaterialId': serializer.toJson<String>(learningMaterialId),
+      'materialTitle': serializer.toJson<String?>(materialTitle),
       'userId': serializer.toJson<String?>(userId),
       'studyProgressId': serializer.toJson<String?>(studyProgressId),
       'scheduledAtUtc': serializer.toJson<DateTime>(scheduledAtUtc),
@@ -3898,6 +3965,7 @@ class LocalStudySession extends DataClass
       'completedAtUtc': serializer.toJson<DateTime?>(completedAtUtc),
       'isCompleted': serializer.toJson<bool>(isCompleted),
       'sequenceNumber': serializer.toJson<int>(sequenceNumber),
+      'plannedDurationMinutes': serializer.toJson<int>(plannedDurationMinutes),
       'qualityScore': serializer.toJson<int?>(qualityScore),
       'difficultyScore': serializer.toJson<int?>(difficultyScore),
       'actualDurationMinutes': serializer.toJson<int?>(actualDurationMinutes),
@@ -3914,6 +3982,7 @@ class LocalStudySession extends DataClass
     String? studyPlanId,
     Value<String?> studyPlanItemId = const Value.absent(),
     String? learningMaterialId,
+    Value<String?> materialTitle = const Value.absent(),
     Value<String?> userId = const Value.absent(),
     Value<String?> studyProgressId = const Value.absent(),
     DateTime? scheduledAtUtc,
@@ -3921,6 +3990,7 @@ class LocalStudySession extends DataClass
     Value<DateTime?> completedAtUtc = const Value.absent(),
     bool? isCompleted,
     int? sequenceNumber,
+    int? plannedDurationMinutes,
     Value<int?> qualityScore = const Value.absent(),
     Value<int?> difficultyScore = const Value.absent(),
     Value<int?> actualDurationMinutes = const Value.absent(),
@@ -3936,6 +4006,9 @@ class LocalStudySession extends DataClass
         ? studyPlanItemId.value
         : this.studyPlanItemId,
     learningMaterialId: learningMaterialId ?? this.learningMaterialId,
+    materialTitle: materialTitle.present
+        ? materialTitle.value
+        : this.materialTitle,
     userId: userId.present ? userId.value : this.userId,
     studyProgressId: studyProgressId.present
         ? studyProgressId.value
@@ -3947,6 +4020,8 @@ class LocalStudySession extends DataClass
         : this.completedAtUtc,
     isCompleted: isCompleted ?? this.isCompleted,
     sequenceNumber: sequenceNumber ?? this.sequenceNumber,
+    plannedDurationMinutes:
+        plannedDurationMinutes ?? this.plannedDurationMinutes,
     qualityScore: qualityScore.present ? qualityScore.value : this.qualityScore,
     difficultyScore: difficultyScore.present
         ? difficultyScore.value
@@ -3972,6 +4047,9 @@ class LocalStudySession extends DataClass
       learningMaterialId: data.learningMaterialId.present
           ? data.learningMaterialId.value
           : this.learningMaterialId,
+      materialTitle: data.materialTitle.present
+          ? data.materialTitle.value
+          : this.materialTitle,
       userId: data.userId.present ? data.userId.value : this.userId,
       studyProgressId: data.studyProgressId.present
           ? data.studyProgressId.value
@@ -3991,6 +4069,9 @@ class LocalStudySession extends DataClass
       sequenceNumber: data.sequenceNumber.present
           ? data.sequenceNumber.value
           : this.sequenceNumber,
+      plannedDurationMinutes: data.plannedDurationMinutes.present
+          ? data.plannedDurationMinutes.value
+          : this.plannedDurationMinutes,
       qualityScore: data.qualityScore.present
           ? data.qualityScore.value
           : this.qualityScore,
@@ -4021,6 +4102,7 @@ class LocalStudySession extends DataClass
           ..write('studyPlanId: $studyPlanId, ')
           ..write('studyPlanItemId: $studyPlanItemId, ')
           ..write('learningMaterialId: $learningMaterialId, ')
+          ..write('materialTitle: $materialTitle, ')
           ..write('userId: $userId, ')
           ..write('studyProgressId: $studyProgressId, ')
           ..write('scheduledAtUtc: $scheduledAtUtc, ')
@@ -4028,6 +4110,7 @@ class LocalStudySession extends DataClass
           ..write('completedAtUtc: $completedAtUtc, ')
           ..write('isCompleted: $isCompleted, ')
           ..write('sequenceNumber: $sequenceNumber, ')
+          ..write('plannedDurationMinutes: $plannedDurationMinutes, ')
           ..write('qualityScore: $qualityScore, ')
           ..write('difficultyScore: $difficultyScore, ')
           ..write('actualDurationMinutes: $actualDurationMinutes, ')
@@ -4041,11 +4124,12 @@ class LocalStudySession extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     studyPlanId,
     studyPlanItemId,
     learningMaterialId,
+    materialTitle,
     userId,
     studyProgressId,
     scheduledAtUtc,
@@ -4053,6 +4137,7 @@ class LocalStudySession extends DataClass
     completedAtUtc,
     isCompleted,
     sequenceNumber,
+    plannedDurationMinutes,
     qualityScore,
     difficultyScore,
     actualDurationMinutes,
@@ -4061,7 +4146,7 @@ class LocalStudySession extends DataClass
     syncStatus,
     isDeleted,
     updatedAtUtc,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4070,6 +4155,7 @@ class LocalStudySession extends DataClass
           other.studyPlanId == this.studyPlanId &&
           other.studyPlanItemId == this.studyPlanItemId &&
           other.learningMaterialId == this.learningMaterialId &&
+          other.materialTitle == this.materialTitle &&
           other.userId == this.userId &&
           other.studyProgressId == this.studyProgressId &&
           other.scheduledAtUtc == this.scheduledAtUtc &&
@@ -4077,6 +4163,7 @@ class LocalStudySession extends DataClass
           other.completedAtUtc == this.completedAtUtc &&
           other.isCompleted == this.isCompleted &&
           other.sequenceNumber == this.sequenceNumber &&
+          other.plannedDurationMinutes == this.plannedDurationMinutes &&
           other.qualityScore == this.qualityScore &&
           other.difficultyScore == this.difficultyScore &&
           other.actualDurationMinutes == this.actualDurationMinutes &&
@@ -4092,6 +4179,7 @@ class LocalStudySessionsCompanion extends UpdateCompanion<LocalStudySession> {
   final Value<String> studyPlanId;
   final Value<String?> studyPlanItemId;
   final Value<String> learningMaterialId;
+  final Value<String?> materialTitle;
   final Value<String?> userId;
   final Value<String?> studyProgressId;
   final Value<DateTime> scheduledAtUtc;
@@ -4099,6 +4187,7 @@ class LocalStudySessionsCompanion extends UpdateCompanion<LocalStudySession> {
   final Value<DateTime?> completedAtUtc;
   final Value<bool> isCompleted;
   final Value<int> sequenceNumber;
+  final Value<int> plannedDurationMinutes;
   final Value<int?> qualityScore;
   final Value<int?> difficultyScore;
   final Value<int?> actualDurationMinutes;
@@ -4113,6 +4202,7 @@ class LocalStudySessionsCompanion extends UpdateCompanion<LocalStudySession> {
     this.studyPlanId = const Value.absent(),
     this.studyPlanItemId = const Value.absent(),
     this.learningMaterialId = const Value.absent(),
+    this.materialTitle = const Value.absent(),
     this.userId = const Value.absent(),
     this.studyProgressId = const Value.absent(),
     this.scheduledAtUtc = const Value.absent(),
@@ -4120,6 +4210,7 @@ class LocalStudySessionsCompanion extends UpdateCompanion<LocalStudySession> {
     this.completedAtUtc = const Value.absent(),
     this.isCompleted = const Value.absent(),
     this.sequenceNumber = const Value.absent(),
+    this.plannedDurationMinutes = const Value.absent(),
     this.qualityScore = const Value.absent(),
     this.difficultyScore = const Value.absent(),
     this.actualDurationMinutes = const Value.absent(),
@@ -4135,6 +4226,7 @@ class LocalStudySessionsCompanion extends UpdateCompanion<LocalStudySession> {
     required String studyPlanId,
     this.studyPlanItemId = const Value.absent(),
     required String learningMaterialId,
+    this.materialTitle = const Value.absent(),
     this.userId = const Value.absent(),
     this.studyProgressId = const Value.absent(),
     required DateTime scheduledAtUtc,
@@ -4142,6 +4234,7 @@ class LocalStudySessionsCompanion extends UpdateCompanion<LocalStudySession> {
     this.completedAtUtc = const Value.absent(),
     this.isCompleted = const Value.absent(),
     this.sequenceNumber = const Value.absent(),
+    this.plannedDurationMinutes = const Value.absent(),
     this.qualityScore = const Value.absent(),
     this.difficultyScore = const Value.absent(),
     this.actualDurationMinutes = const Value.absent(),
@@ -4160,6 +4253,7 @@ class LocalStudySessionsCompanion extends UpdateCompanion<LocalStudySession> {
     Expression<String>? studyPlanId,
     Expression<String>? studyPlanItemId,
     Expression<String>? learningMaterialId,
+    Expression<String>? materialTitle,
     Expression<String>? userId,
     Expression<String>? studyProgressId,
     Expression<DateTime>? scheduledAtUtc,
@@ -4167,6 +4261,7 @@ class LocalStudySessionsCompanion extends UpdateCompanion<LocalStudySession> {
     Expression<DateTime>? completedAtUtc,
     Expression<bool>? isCompleted,
     Expression<int>? sequenceNumber,
+    Expression<int>? plannedDurationMinutes,
     Expression<int>? qualityScore,
     Expression<int>? difficultyScore,
     Expression<int>? actualDurationMinutes,
@@ -4183,6 +4278,7 @@ class LocalStudySessionsCompanion extends UpdateCompanion<LocalStudySession> {
       if (studyPlanItemId != null) 'study_plan_item_id': studyPlanItemId,
       if (learningMaterialId != null)
         'learning_material_id': learningMaterialId,
+      if (materialTitle != null) 'material_title': materialTitle,
       if (userId != null) 'user_id': userId,
       if (studyProgressId != null) 'study_progress_id': studyProgressId,
       if (scheduledAtUtc != null) 'scheduled_at_utc': scheduledAtUtc,
@@ -4190,6 +4286,8 @@ class LocalStudySessionsCompanion extends UpdateCompanion<LocalStudySession> {
       if (completedAtUtc != null) 'completed_at_utc': completedAtUtc,
       if (isCompleted != null) 'is_completed': isCompleted,
       if (sequenceNumber != null) 'sequence_number': sequenceNumber,
+      if (plannedDurationMinutes != null)
+        'planned_duration_minutes': plannedDurationMinutes,
       if (qualityScore != null) 'quality_score': qualityScore,
       if (difficultyScore != null) 'difficulty_score': difficultyScore,
       if (actualDurationMinutes != null)
@@ -4208,6 +4306,7 @@ class LocalStudySessionsCompanion extends UpdateCompanion<LocalStudySession> {
     Value<String>? studyPlanId,
     Value<String?>? studyPlanItemId,
     Value<String>? learningMaterialId,
+    Value<String?>? materialTitle,
     Value<String?>? userId,
     Value<String?>? studyProgressId,
     Value<DateTime>? scheduledAtUtc,
@@ -4215,6 +4314,7 @@ class LocalStudySessionsCompanion extends UpdateCompanion<LocalStudySession> {
     Value<DateTime?>? completedAtUtc,
     Value<bool>? isCompleted,
     Value<int>? sequenceNumber,
+    Value<int>? plannedDurationMinutes,
     Value<int?>? qualityScore,
     Value<int?>? difficultyScore,
     Value<int?>? actualDurationMinutes,
@@ -4230,6 +4330,7 @@ class LocalStudySessionsCompanion extends UpdateCompanion<LocalStudySession> {
       studyPlanId: studyPlanId ?? this.studyPlanId,
       studyPlanItemId: studyPlanItemId ?? this.studyPlanItemId,
       learningMaterialId: learningMaterialId ?? this.learningMaterialId,
+      materialTitle: materialTitle ?? this.materialTitle,
       userId: userId ?? this.userId,
       studyProgressId: studyProgressId ?? this.studyProgressId,
       scheduledAtUtc: scheduledAtUtc ?? this.scheduledAtUtc,
@@ -4237,6 +4338,8 @@ class LocalStudySessionsCompanion extends UpdateCompanion<LocalStudySession> {
       completedAtUtc: completedAtUtc ?? this.completedAtUtc,
       isCompleted: isCompleted ?? this.isCompleted,
       sequenceNumber: sequenceNumber ?? this.sequenceNumber,
+      plannedDurationMinutes:
+          plannedDurationMinutes ?? this.plannedDurationMinutes,
       qualityScore: qualityScore ?? this.qualityScore,
       difficultyScore: difficultyScore ?? this.difficultyScore,
       actualDurationMinutes:
@@ -4265,6 +4368,9 @@ class LocalStudySessionsCompanion extends UpdateCompanion<LocalStudySession> {
     if (learningMaterialId.present) {
       map['learning_material_id'] = Variable<String>(learningMaterialId.value);
     }
+    if (materialTitle.present) {
+      map['material_title'] = Variable<String>(materialTitle.value);
+    }
     if (userId.present) {
       map['user_id'] = Variable<String>(userId.value);
     }
@@ -4285,6 +4391,11 @@ class LocalStudySessionsCompanion extends UpdateCompanion<LocalStudySession> {
     }
     if (sequenceNumber.present) {
       map['sequence_number'] = Variable<int>(sequenceNumber.value);
+    }
+    if (plannedDurationMinutes.present) {
+      map['planned_duration_minutes'] = Variable<int>(
+        plannedDurationMinutes.value,
+      );
     }
     if (qualityScore.present) {
       map['quality_score'] = Variable<int>(qualityScore.value);
@@ -4325,6 +4436,7 @@ class LocalStudySessionsCompanion extends UpdateCompanion<LocalStudySession> {
           ..write('studyPlanId: $studyPlanId, ')
           ..write('studyPlanItemId: $studyPlanItemId, ')
           ..write('learningMaterialId: $learningMaterialId, ')
+          ..write('materialTitle: $materialTitle, ')
           ..write('userId: $userId, ')
           ..write('studyProgressId: $studyProgressId, ')
           ..write('scheduledAtUtc: $scheduledAtUtc, ')
@@ -4332,6 +4444,7 @@ class LocalStudySessionsCompanion extends UpdateCompanion<LocalStudySession> {
           ..write('completedAtUtc: $completedAtUtc, ')
           ..write('isCompleted: $isCompleted, ')
           ..write('sequenceNumber: $sequenceNumber, ')
+          ..write('plannedDurationMinutes: $plannedDurationMinutes, ')
           ..write('qualityScore: $qualityScore, ')
           ..write('difficultyScore: $difficultyScore, ')
           ..write('actualDurationMinutes: $actualDurationMinutes, ')
@@ -6585,6 +6698,7 @@ typedef $$LocalStudySessionsTableCreateCompanionBuilder =
       required String studyPlanId,
       Value<String?> studyPlanItemId,
       required String learningMaterialId,
+      Value<String?> materialTitle,
       Value<String?> userId,
       Value<String?> studyProgressId,
       required DateTime scheduledAtUtc,
@@ -6592,6 +6706,7 @@ typedef $$LocalStudySessionsTableCreateCompanionBuilder =
       Value<DateTime?> completedAtUtc,
       Value<bool> isCompleted,
       Value<int> sequenceNumber,
+      Value<int> plannedDurationMinutes,
       Value<int?> qualityScore,
       Value<int?> difficultyScore,
       Value<int?> actualDurationMinutes,
@@ -6608,6 +6723,7 @@ typedef $$LocalStudySessionsTableUpdateCompanionBuilder =
       Value<String> studyPlanId,
       Value<String?> studyPlanItemId,
       Value<String> learningMaterialId,
+      Value<String?> materialTitle,
       Value<String?> userId,
       Value<String?> studyProgressId,
       Value<DateTime> scheduledAtUtc,
@@ -6615,6 +6731,7 @@ typedef $$LocalStudySessionsTableUpdateCompanionBuilder =
       Value<DateTime?> completedAtUtc,
       Value<bool> isCompleted,
       Value<int> sequenceNumber,
+      Value<int> plannedDurationMinutes,
       Value<int?> qualityScore,
       Value<int?> difficultyScore,
       Value<int?> actualDurationMinutes,
@@ -6655,6 +6772,11 @@ class $$LocalStudySessionsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get materialTitle => $composableBuilder(
+    column: $table.materialTitle,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get userId => $composableBuilder(
     column: $table.userId,
     builder: (column) => ColumnFilters(column),
@@ -6687,6 +6809,11 @@ class $$LocalStudySessionsTableFilterComposer
 
   ColumnFilters<int> get sequenceNumber => $composableBuilder(
     column: $table.sequenceNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get plannedDurationMinutes => $composableBuilder(
+    column: $table.plannedDurationMinutes,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6760,6 +6887,11 @@ class $$LocalStudySessionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get materialTitle => $composableBuilder(
+    column: $table.materialTitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get userId => $composableBuilder(
     column: $table.userId,
     builder: (column) => ColumnOrderings(column),
@@ -6792,6 +6924,11 @@ class $$LocalStudySessionsTableOrderingComposer
 
   ColumnOrderings<int> get sequenceNumber => $composableBuilder(
     column: $table.sequenceNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get plannedDurationMinutes => $composableBuilder(
+    column: $table.plannedDurationMinutes,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -6863,6 +7000,11 @@ class $$LocalStudySessionsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get materialTitle => $composableBuilder(
+    column: $table.materialTitle,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get userId =>
       $composableBuilder(column: $table.userId, builder: (column) => column);
 
@@ -6893,6 +7035,11 @@ class $$LocalStudySessionsTableAnnotationComposer
 
   GeneratedColumn<int> get sequenceNumber => $composableBuilder(
     column: $table.sequenceNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get plannedDurationMinutes => $composableBuilder(
+    column: $table.plannedDurationMinutes,
     builder: (column) => column,
   );
 
@@ -6977,6 +7124,7 @@ class $$LocalStudySessionsTableTableManager
                 Value<String> studyPlanId = const Value.absent(),
                 Value<String?> studyPlanItemId = const Value.absent(),
                 Value<String> learningMaterialId = const Value.absent(),
+                Value<String?> materialTitle = const Value.absent(),
                 Value<String?> userId = const Value.absent(),
                 Value<String?> studyProgressId = const Value.absent(),
                 Value<DateTime> scheduledAtUtc = const Value.absent(),
@@ -6984,6 +7132,7 @@ class $$LocalStudySessionsTableTableManager
                 Value<DateTime?> completedAtUtc = const Value.absent(),
                 Value<bool> isCompleted = const Value.absent(),
                 Value<int> sequenceNumber = const Value.absent(),
+                Value<int> plannedDurationMinutes = const Value.absent(),
                 Value<int?> qualityScore = const Value.absent(),
                 Value<int?> difficultyScore = const Value.absent(),
                 Value<int?> actualDurationMinutes = const Value.absent(),
@@ -6998,6 +7147,7 @@ class $$LocalStudySessionsTableTableManager
                 studyPlanId: studyPlanId,
                 studyPlanItemId: studyPlanItemId,
                 learningMaterialId: learningMaterialId,
+                materialTitle: materialTitle,
                 userId: userId,
                 studyProgressId: studyProgressId,
                 scheduledAtUtc: scheduledAtUtc,
@@ -7005,6 +7155,7 @@ class $$LocalStudySessionsTableTableManager
                 completedAtUtc: completedAtUtc,
                 isCompleted: isCompleted,
                 sequenceNumber: sequenceNumber,
+                plannedDurationMinutes: plannedDurationMinutes,
                 qualityScore: qualityScore,
                 difficultyScore: difficultyScore,
                 actualDurationMinutes: actualDurationMinutes,
@@ -7021,6 +7172,7 @@ class $$LocalStudySessionsTableTableManager
                 required String studyPlanId,
                 Value<String?> studyPlanItemId = const Value.absent(),
                 required String learningMaterialId,
+                Value<String?> materialTitle = const Value.absent(),
                 Value<String?> userId = const Value.absent(),
                 Value<String?> studyProgressId = const Value.absent(),
                 required DateTime scheduledAtUtc,
@@ -7028,6 +7180,7 @@ class $$LocalStudySessionsTableTableManager
                 Value<DateTime?> completedAtUtc = const Value.absent(),
                 Value<bool> isCompleted = const Value.absent(),
                 Value<int> sequenceNumber = const Value.absent(),
+                Value<int> plannedDurationMinutes = const Value.absent(),
                 Value<int?> qualityScore = const Value.absent(),
                 Value<int?> difficultyScore = const Value.absent(),
                 Value<int?> actualDurationMinutes = const Value.absent(),
@@ -7042,6 +7195,7 @@ class $$LocalStudySessionsTableTableManager
                 studyPlanId: studyPlanId,
                 studyPlanItemId: studyPlanItemId,
                 learningMaterialId: learningMaterialId,
+                materialTitle: materialTitle,
                 userId: userId,
                 studyProgressId: studyProgressId,
                 scheduledAtUtc: scheduledAtUtc,
@@ -7049,6 +7203,7 @@ class $$LocalStudySessionsTableTableManager
                 completedAtUtc: completedAtUtc,
                 isCompleted: isCompleted,
                 sequenceNumber: sequenceNumber,
+                plannedDurationMinutes: plannedDurationMinutes,
                 qualityScore: qualityScore,
                 difficultyScore: difficultyScore,
                 actualDurationMinutes: actualDurationMinutes,

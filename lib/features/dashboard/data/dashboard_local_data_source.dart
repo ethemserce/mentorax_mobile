@@ -1,0 +1,104 @@
+import 'package:drift/drift.dart';
+import 'package:mentorax/core/database/app_database.dart';
+
+import 'models/mobile_dashboard_model.dart';
+import 'models/next_session_model.dart';
+
+class DashboardLocalDataSource {
+  final AppDatabase _database;
+
+  DashboardLocalDataSource(this._database);
+
+  Future<void> cacheNextSession(NextSessionModel session) async {
+    await _database
+        .into(_database.localStudySessions)
+        .insert(
+          LocalStudySessionsCompanion.insert(
+            id: session.sessionId,
+            studyPlanId: session.studyPlanId,
+            learningMaterialId: session.materialId,
+            materialTitle: Value(session.materialTitle),
+            scheduledAtUtc: session.scheduledAtUtc,
+            startedAtUtc: Value(session.startedAtUtc),
+            isCompleted: const Value(false),
+            plannedDurationMinutes: Value(session.estimatedMinutes),
+            status: const Value('Pending'),
+            updatedAtUtc: Value(DateTime.now().toUtc()),
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+  }
+
+  Future<NextSessionModel?> getNextSession() async {
+    final row = await _nextPendingSessionRow();
+    if (row == null) return null;
+
+    return _toNextSessionModel(row);
+  }
+
+  Future<MobileDashboardModel?> getDashboard() async {
+    final sessions = await (_database.select(
+      _database.localStudySessions,
+    )..where((row) => row.isDeleted.equals(false))).get();
+
+    if (sessions.isEmpty) return null;
+
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final tomorrowStart = todayStart.add(const Duration(days: 1));
+
+    final todaySessions = sessions.where((session) {
+      final localScheduledAt = session.scheduledAtUtc.toLocal();
+      return !localScheduledAt.isBefore(todayStart) &&
+          localScheduledAt.isBefore(tomorrowStart);
+    }).toList();
+
+    final nextSession = await getNextSession();
+
+    return MobileDashboardModel(
+      dueCount: todaySessions
+          .where(
+            (session) =>
+                !session.isCompleted &&
+                !session.scheduledAtUtc.isAfter(DateTime.now().toUtc()),
+          )
+          .length,
+      todayPlannedMinutes: todaySessions.fold<int>(
+        0,
+        (total, session) => total + session.plannedDurationMinutes,
+      ),
+      todayCompletedMinutes: todaySessions.fold<int>(
+        0,
+        (total, session) => total + (session.actualDurationMinutes ?? 0),
+      ),
+      nextSession: nextSession,
+      weakMaterials: const [],
+    );
+  }
+
+  Future<LocalStudySession?> _nextPendingSessionRow() {
+    return (_database.select(_database.localStudySessions)
+          ..where(
+            (row) =>
+                row.isCompleted.equals(false) & row.isDeleted.equals(false),
+          )
+          ..orderBy([(row) => OrderingTerm.asc(row.scheduledAtUtc)])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+}
+
+NextSessionModel _toNextSessionModel(LocalStudySession session) {
+  final now = DateTime.now().toUtc();
+
+  return NextSessionModel(
+    sessionId: session.id,
+    studyPlanId: session.studyPlanId,
+    materialId: session.learningMaterialId,
+    materialTitle: session.materialTitle ?? 'Study session',
+    scheduledAtUtc: session.scheduledAtUtc,
+    startedAtUtc: session.startedAtUtc,
+    estimatedMinutes: session.plannedDurationMinutes,
+    isDue: !session.scheduledAtUtc.isAfter(now),
+  );
+}

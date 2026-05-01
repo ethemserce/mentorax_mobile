@@ -10,7 +10,9 @@ class DashboardService {
   Future<MobileDashboardModel> getDashboard() async {
     try {
       final response = await _dio.get('/api/mobile/dashboard');
-      return MobileDashboardModel.fromJson(response.data as Map<String, dynamic>);
+      return MobileDashboardModel.fromJson(
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw _mapDioException(e);
     }
@@ -27,7 +29,9 @@ class DashboardService {
 
   Future<NextSessionModel> startSession(String sessionId) async {
     try {
-      final response = await _dio.post('/api/mobile/study-sessions/$sessionId/start');
+      final response = await _dio.post(
+        '/api/mobile/study-sessions/$sessionId/start',
+      );
       return NextSessionModel.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _mapDioException(e);
@@ -56,8 +60,7 @@ class DashboardService {
     }
   }
 
-ApiException _mapDioException(DioException e) {
-  return ApiException.fromDioException(e);
-}
-
+  ApiException _mapDioException(DioException e) {
+    return ApiException.fromDioException(e);
+  }
 }

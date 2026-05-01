@@ -38,9 +38,7 @@ class StudyPlanModel {
   bool get isActive => status.toLowerCase() == 'active';
 
   StudyPlanSessionModel? get nextPendingSession {
-    final pending = sessions
-        .where((x) => x.completedAtUtc == null)
-        .toList()
+    final pending = sessions.where((x) => x.completedAtUtc == null).toList()
       ..sort((a, b) => a.scheduledAtUtc.compareTo(b.scheduledAtUtc));
 
     if (pending.isEmpty) return null;
@@ -56,12 +54,12 @@ class StudyPlanModel {
       startDate: json['startDate'] as String,
       dailyTargetMinutes: json['dailyTargetMinutes'] as int,
       status: json['status'] as String,
-sessions: ((json['sessions'] as List?) ?? [])
-    .map((e) => StudyPlanSessionModel.fromJson(e as Map<String, dynamic>))
-    .toList(),
-items: ((json['items'] as List?) ?? [])
-    .map((x) => StudyPlanItemModel.fromJson(x as Map<String, dynamic>))
-    .toList(),
+      sessions: ((json['sessions'] as List?) ?? [])
+          .map((e) => StudyPlanSessionModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      items: ((json['items'] as List?) ?? [])
+          .map((x) => StudyPlanItemModel.fromJson(x as Map<String, dynamic>))
+          .toList(),
     );
   }
 }

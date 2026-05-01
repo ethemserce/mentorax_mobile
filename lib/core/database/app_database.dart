@@ -103,6 +103,7 @@ class LocalStudySessions extends Table {
   TextColumn get studyPlanId => text()();
   TextColumn get studyPlanItemId => text().nullable()();
   TextColumn get learningMaterialId => text()();
+  TextColumn get materialTitle => text().nullable()();
   TextColumn get userId => text().nullable()();
   TextColumn get studyProgressId => text().nullable()();
   DateTimeColumn get scheduledAtUtc => dateTime()();
@@ -110,6 +111,8 @@ class LocalStudySessions extends Table {
   DateTimeColumn get completedAtUtc => dateTime().nullable()();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   IntColumn get sequenceNumber => integer().withDefault(const Constant(0))();
+  IntColumn get plannedDurationMinutes =>
+      integer().withDefault(const Constant(0))();
   IntColumn get qualityScore => integer().nullable()();
   IntColumn get difficultyScore => integer().nullable()();
   IntColumn get actualDurationMinutes => integer().nullable()();
@@ -157,5 +160,23 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration {
+    return MigrationStrategy(
+      onUpgrade: (migrator, from, to) async {
+        if (from < 2) {
+          await migrator.addColumn(
+            localStudySessions,
+            localStudySessions.materialTitle,
+          );
+          await migrator.addColumn(
+            localStudySessions,
+            localStudySessions.plannedDurationMinutes,
+          );
+        }
+      },
+    );
+  }
 }
