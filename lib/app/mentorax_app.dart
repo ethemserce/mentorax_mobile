@@ -1,24 +1,29 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/auth/auth_session.dart';
 import '../core/constants/app_theme.dart';
 import '../core/router/app_router.dart';
+import '../features/auth/presentation/providers/auth_providers.dart';
 
-class MentoraXApp extends StatefulWidget {
+class MentoraXApp extends ConsumerStatefulWidget {
   const MentoraXApp({super.key});
 
   @override
-  State<MentoraXApp> createState() => _MentoraXAppState();
+  ConsumerState<MentoraXApp> createState() => _MentoraXAppState();
 }
 
-class _MentoraXAppState extends State<MentoraXApp> {
+class _MentoraXAppState extends ConsumerState<MentoraXApp> {
   StreamSubscription<void>? _unauthorizedSubscription;
 
   @override
   void initState() {
     super.initState();
 
-    _unauthorizedSubscription = AuthSession.onUnauthorized.listen((_) {
+    _unauthorizedSubscription = AuthSession.onUnauthorized.listen((_) async {
+      await ref.read(authControllerProvider.notifier).handleUnauthorized();
+
+      if (!mounted) return;
       AppRouter.router.go('/login');
     });
   }
