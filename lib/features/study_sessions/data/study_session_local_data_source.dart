@@ -8,7 +8,10 @@ class StudySessionLocalDataSource {
 
   StudySessionLocalDataSource(this._database);
 
-  Future<void> cacheSessionDetail(StudySessionDetailModel session) async {
+  Future<void> cacheSessionDetail(
+    StudySessionDetailModel session, {
+    String? syncStatus,
+  }) async {
     final existing = await (_database.select(
       _database.localStudySessions,
     )..where((row) => row.id.equals(session.id))).getSingleOrNull();
@@ -31,7 +34,7 @@ class StudySessionLocalDataSource {
             actualDurationMinutes: Value(session.actualDurationMinutes),
             reviewNotes: Value(session.notes),
             status: Value(session.status),
-            syncStatus: Value(existing?.syncStatus ?? 'synced'),
+            syncStatus: Value(syncStatus ?? existing?.syncStatus ?? 'synced'),
             updatedAtUtc: Value(DateTime.now().toUtc()),
           ),
           mode: InsertMode.insertOrReplace,
@@ -58,6 +61,11 @@ class StudySessionLocalDataSource {
     }
 
     if (session.materialChunkId != null && session.chunkContent != null) {
+      final existingChunk =
+          await (_database.select(_database.localMaterialChunks)
+                ..where((row) => row.id.equals(session.materialChunkId!)))
+              .getSingleOrNull();
+
       await _database
           .into(_database.localMaterialChunks)
           .insert(
@@ -67,9 +75,15 @@ class StudySessionLocalDataSource {
               orderNo: session.sequenceNumber,
               title: Value(session.chunkTitle),
               content: session.chunkContent!,
-              difficultyLevel: 1,
-              estimatedStudyMinutes: session.plannedDurationMinutes,
-              characterCount: session.chunkContent!.length,
+              summary: Value(existingChunk?.summary),
+              keywords: Value(existingChunk?.keywords),
+              difficultyLevel: existingChunk?.difficultyLevel ?? 1,
+              estimatedStudyMinutes:
+                  existingChunk?.estimatedStudyMinutes ??
+                  session.plannedDurationMinutes,
+              characterCount:
+                  existingChunk?.characterCount ?? session.chunkContent!.length,
+              isGeneratedByAI: Value(existingChunk?.isGeneratedByAI ?? false),
               updatedAtUtc: Value(DateTime.now().toUtc()),
             ),
             mode: InsertMode.insertOrReplace,

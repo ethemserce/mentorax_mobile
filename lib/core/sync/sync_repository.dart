@@ -1,8 +1,13 @@
 import 'package:drift/drift.dart';
 import 'package:mentorax/core/database/app_database.dart';
 import 'package:mentorax/features/dashboard/data/dashboard_local_data_source.dart';
+import 'package:mentorax/features/materials/data/material_local_data_source.dart';
+import 'package:mentorax/features/materials/data/models/material_chunk_model.dart';
+import 'package:mentorax/features/materials/data/models/material_model.dart';
 import 'package:mentorax/features/study_plans/data/study_plan_local_data_source.dart';
 import 'package:mentorax/features/study_plans/data/models/study_plan_model.dart';
+import 'package:mentorax/features/study_sessions/data/models/study_session_detail_model.dart';
+import 'package:mentorax/features/study_sessions/data/study_session_local_data_source.dart';
 
 import 'sync_models.dart';
 import 'sync_service.dart';
@@ -34,6 +39,8 @@ class SyncRepository {
   final SyncStateStorage? _stateStorage;
   final StudyPlanLocalDataSource? _studyPlanLocal;
   final DashboardLocalDataSource? _dashboardLocal;
+  final MaterialLocalDataSource? _materialLocal;
+  final StudySessionLocalDataSource? _studySessionLocal;
 
   bool _isSyncing = false;
 
@@ -43,11 +50,15 @@ class SyncRepository {
     SyncStateStorage? stateStorage,
     StudyPlanLocalDataSource? studyPlanLocal,
     DashboardLocalDataSource? dashboardLocal,
+    MaterialLocalDataSource? materialLocal,
+    StudySessionLocalDataSource? studySessionLocal,
   }) : _database = database,
        _service = service,
        _stateStorage = stateStorage,
        _studyPlanLocal = studyPlanLocal,
-       _dashboardLocal = dashboardLocal;
+       _dashboardLocal = dashboardLocal,
+       _materialLocal = materialLocal,
+       _studySessionLocal = studySessionLocal;
 
   Future<SyncRunResult> pushPendingOperations() async {
     if (_isSyncing) return SyncRunResult.empty;
@@ -149,22 +160,54 @@ class SyncRepository {
 
   Future<void> _applyChanges(SyncChangesModel changes) async {
     final plans = <StudyPlanModel>[];
+    final materials = <MaterialModel>[];
+    final chunks = <MaterialChunkModel>[];
+    final sessions = <StudySessionDetailModel>[];
 
     for (final change in changes.changes) {
-      if (change.entityType == 'StudyPlan' &&
-          change.changeType == 'Upsert' &&
-          change.payload != null) {
-        plans.add(StudyPlanModel.fromJson(change.payload!));
-        continue;
+      if (change.changeType != 'Upsert' || change.payload == null) {
+        throw UnsupportedError(
+          'Unsupported sync change: ${change.entityType}/${change.changeType}',
+        );
       }
 
-      throw UnsupportedError(
-        'Unsupported sync change: ${change.entityType}/${change.changeType}',
-      );
+      switch (change.entityType) {
+        case 'Material':
+          materials.add(MaterialModel.fromJson(change.payload!));
+          break;
+        case 'MaterialChunk':
+          chunks.add(MaterialChunkModel.fromJson(change.payload!));
+          break;
+        case 'StudyPlan':
+          plans.add(StudyPlanModel.fromJson(change.payload!));
+          break;
+        case 'StudySession':
+          sessions.add(StudySessionDetailModel.fromJson(change.payload!));
+          break;
+        default:
+          throw UnsupportedError(
+            'Unsupported sync change: ${change.entityType}/${change.changeType}',
+          );
+      }
+    }
+
+    for (final material in materials) {
+      await _materialLocal?.cacheMaterial(material);
+    }
+
+    for (final chunk in chunks) {
+      await _materialLocal?.cacheChunk(chunk);
     }
 
     if (plans.isNotEmpty) {
       await _studyPlanLocal?.cachePlans(plans);
+    }
+
+    for (final session in sessions) {
+      await _studySessionLocal?.cacheSessionDetail(
+        session,
+        syncStatus: _syncedStatus,
+      );
     }
   }
 

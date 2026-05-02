@@ -7,7 +7,9 @@ import 'package:mentorax/core/sync/sync_service.dart';
 import 'package:mentorax/core/sync/sync_state_storage.dart';
 import 'package:mentorax/features/dashboard/data/dashboard_local_data_source.dart';
 import 'package:mentorax/features/dashboard/data/models/next_session_model.dart';
+import 'package:mentorax/features/materials/data/material_local_data_source.dart';
 import 'package:mentorax/features/study_plans/data/study_plan_local_data_source.dart';
+import 'package:mentorax/features/study_sessions/data/study_session_local_data_source.dart';
 
 void main() {
   late AppDatabase database;
@@ -325,6 +327,46 @@ void main() {
     expect(stateStorage.lastSyncAt, DateTime.utc(2026, 5, 1, 11));
   });
 
+  test('applies expanded delta changes into local caches', () async {
+    final stateStorage = _FakeSyncStateStorage(
+      lastSyncAt: DateTime.utc(2026, 5, 1, 9),
+    );
+    final service = _FakeSyncService(
+      response: (operations) =>
+          _response(operations, statusFor: (_) => 'applied'),
+      changesResponse: _expandedChanges(),
+    );
+    final repository = SyncRepository(
+      database: database,
+      service: service,
+      stateStorage: stateStorage,
+      studyPlanLocal: StudyPlanLocalDataSource(database),
+      dashboardLocal: dashboardLocal,
+      materialLocal: MaterialLocalDataSource(database),
+      studySessionLocal: StudySessionLocalDataSource(database),
+    );
+
+    await repository.synchronize();
+
+    final materials = await database.select(database.localMaterials).get();
+    final chunks = await database.select(database.localMaterialChunks).get();
+    final sessions = await database.select(database.localStudySessions).get();
+
+    expect(service.changesCalled, isTrue);
+    expect(materials, hasLength(1));
+    expect(materials.single.title, 'Delta Material');
+    expect(chunks, hasLength(1));
+    expect(chunks.single.title, 'Delta Chunk');
+    expect(chunks.single.difficultyLevel, 3);
+    expect(chunks.single.summary, 'Chunk summary');
+    expect(sessions, hasLength(1));
+    expect(sessions.single.id, 'session-1');
+    expect(sessions.single.status, 'InProgress');
+    expect(sessions.single.startedAtUtc?.toUtc(), DateTime.utc(2026, 5, 1, 9));
+    expect(sessions.single.syncStatus, 'synced');
+    expect(stateStorage.lastSyncAt, DateTime.utc(2026, 5, 1, 11));
+  });
+
   test('falls back to bootstrap when delta pull fails', () async {
     final stateStorage = _FakeSyncStateStorage(
       lastSyncAt: DateTime.utc(2026, 5, 1, 9),
@@ -353,6 +395,90 @@ void main() {
     expect(plans.single.title, 'Bootstrap Fallback Plan');
     expect(stateStorage.lastSyncAt, DateTime.utc(2026, 5, 1, 10));
   });
+}
+
+SyncChangesModel _expandedChanges() {
+  return SyncChangesModel.fromJson({
+    'serverTimeUtc': '2026-05-01T11:00:00Z',
+    'changes': [
+      {
+        'entityType': 'Material',
+        'entityId': 'material-1',
+        'changeType': 'Upsert',
+        'changedAtUtc': '2026-05-01T10:10:00Z',
+        'payload': _materialJson(),
+      },
+      {
+        'entityType': 'MaterialChunk',
+        'entityId': 'chunk-1',
+        'changeType': 'Upsert',
+        'changedAtUtc': '2026-05-01T10:15:00Z',
+        'payload': _chunkJson(),
+      },
+      {
+        'entityType': 'StudySession',
+        'entityId': 'session-1',
+        'changeType': 'Upsert',
+        'changedAtUtc': '2026-05-01T10:20:00Z',
+        'payload': _sessionDetailJson(),
+      },
+    ],
+  });
+}
+
+Map<String, dynamic> _materialJson() {
+  return {
+    'id': 'material-1',
+    'userId': 'user-1',
+    'title': 'Delta Material',
+    'materialType': 'Text',
+    'content': 'Delta material content',
+    'estimatedDurationMinutes': 45,
+    'description': 'Material description',
+    'tags': 'delta,sync',
+    'hasActivePlan': true,
+    'activePlanId': 'plan-1',
+    'activePlanTitle': 'Delta Plan',
+  };
+}
+
+Map<String, dynamic> _chunkJson() {
+  return {
+    'id': 'chunk-1',
+    'learningMaterialId': 'material-1',
+    'orderNo': 1,
+    'title': 'Delta Chunk',
+    'content': 'Delta chunk content',
+    'summary': 'Chunk summary',
+    'keywords': 'delta',
+    'difficultyLevel': 3,
+    'estimatedStudyMinutes': 20,
+    'characterCount': 19,
+    'isGeneratedByAI': true,
+  };
+}
+
+Map<String, dynamic> _sessionDetailJson() {
+  return {
+    'id': 'session-1',
+    'studyPlanId': 'plan-1',
+    'studyPlanItemId': 'item-1',
+    'learningMaterialId': 'material-1',
+    'materialChunkId': 'chunk-1',
+    'planTitle': 'Delta Plan',
+    'materialTitle': 'Delta Material',
+    'chunkTitle': 'Delta Chunk',
+    'chunkContent': 'Delta chunk content',
+    'itemType': 'Study',
+    'sequenceNumber': 1,
+    'scheduledAtUtc': '2026-05-01T08:55:00Z',
+    'startedAtUtc': '2026-05-01T09:00:00Z',
+    'plannedDurationMinutes': 25,
+    'status': 'InProgress',
+    'completedAtUtc': null,
+    'actualDurationMinutes': null,
+    'notes': null,
+  };
 }
 
 NextSessionModel _session() {
