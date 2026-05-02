@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mentorax/core/database/app_database.dart';
@@ -367,6 +368,50 @@ void main() {
     expect(stateStorage.lastSyncAt, DateTime.utc(2026, 5, 1, 11));
   });
 
+  test('applies delete delta changes into local caches', () async {
+    await database
+        .into(database.localMaterialChunks)
+        .insert(
+          LocalMaterialChunksCompanion.insert(
+            id: 'chunk-delete',
+            learningMaterialId: 'material-1',
+            orderNo: 1,
+            title: const Value('Deleted Chunk'),
+            content: 'Deleted chunk content',
+            difficultyLevel: 2,
+            estimatedStudyMinutes: 15,
+            characterCount: 21,
+          ),
+        );
+    final stateStorage = _FakeSyncStateStorage(
+      lastSyncAt: DateTime.utc(2026, 5, 1, 9),
+    );
+    final service = _FakeSyncService(
+      response: (operations) =>
+          _response(operations, statusFor: (_) => 'applied'),
+      changesResponse: _deleteChanges(),
+    );
+    final materialLocal = MaterialLocalDataSource(database);
+    final repository = SyncRepository(
+      database: database,
+      service: service,
+      stateStorage: stateStorage,
+      materialLocal: materialLocal,
+    );
+
+    await repository.synchronize();
+
+    final visibleChunks = await materialLocal.getChunks('material-1');
+    final deletedChunk = await database
+        .select(database.localMaterialChunks)
+        .getSingle();
+
+    expect(service.changesCalled, isTrue);
+    expect(visibleChunks, isEmpty);
+    expect(deletedChunk.isDeleted, isTrue);
+    expect(stateStorage.lastSyncAt, DateTime.utc(2026, 5, 1, 11));
+  });
+
   test('falls back to bootstrap when delta pull fails', () async {
     final stateStorage = _FakeSyncStateStorage(
       lastSyncAt: DateTime.utc(2026, 5, 1, 9),
@@ -394,6 +439,24 @@ void main() {
     expect(plans, hasLength(1));
     expect(plans.single.title, 'Bootstrap Fallback Plan');
     expect(stateStorage.lastSyncAt, DateTime.utc(2026, 5, 1, 10));
+  });
+}
+
+SyncChangesModel _deleteChanges() {
+  return SyncChangesModel.fromJson({
+    'serverTimeUtc': '2026-05-01T11:00:00Z',
+    'changes': [
+      {
+        'entityType': 'MaterialChunk',
+        'entityId': 'chunk-delete',
+        'changeType': 'Delete',
+        'changedAtUtc': '2026-05-01T10:40:00Z',
+        'payload': {
+          'id': 'chunk-delete',
+          'deletedAtUtc': '2026-05-01T10:40:00Z',
+        },
+      },
+    ],
   });
 }
 

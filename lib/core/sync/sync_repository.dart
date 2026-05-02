@@ -163,8 +163,14 @@ class SyncRepository {
     final materials = <MaterialModel>[];
     final chunks = <MaterialChunkModel>[];
     final sessions = <StudySessionDetailModel>[];
+    final deletes = <SyncChangeModel>[];
 
     for (final change in changes.changes) {
+      if (change.changeType == 'Delete') {
+        deletes.add(change);
+        continue;
+      }
+
       if (change.changeType != 'Upsert' || change.payload == null) {
         throw UnsupportedError(
           'Unsupported sync change: ${change.entityType}/${change.changeType}',
@@ -208,6 +214,27 @@ class SyncRepository {
         session,
         syncStatus: _syncedStatus,
       );
+    }
+
+    for (final change in deletes) {
+      await _applyDeleteChange(change);
+    }
+  }
+
+  Future<void> _applyDeleteChange(SyncChangeModel change) async {
+    switch (change.entityType) {
+      case 'MaterialChunk':
+        final materialLocal = _materialLocal;
+        if (materialLocal == null) {
+          throw StateError('Material local cache is required for delete sync.');
+        }
+
+        await materialLocal.deleteChunk(change.entityId);
+        break;
+      default:
+        throw UnsupportedError(
+          'Unsupported sync change: ${change.entityType}/${change.changeType}',
+        );
     }
   }
 
