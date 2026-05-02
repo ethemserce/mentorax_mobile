@@ -182,6 +182,133 @@ void main() {
   );
 
   test(
+    'pushes material create operations and marks material cache synced',
+    () async {
+      await database
+          .into(database.localMaterials)
+          .insert(
+            LocalMaterialsCompanion.insert(
+              id: 'material-1',
+              userId: 'offline-user',
+              title: 'Offline Material',
+              materialType: 'Text',
+              content: 'Offline material content',
+              estimatedDurationMinutes: 40,
+              syncStatus: const Value('pending'),
+              updatedAtUtc: Value(DateTime.utc(2026, 5, 1, 9)),
+            ),
+          );
+      await database
+          .into(database.localMaterialChunks)
+          .insert(
+            LocalMaterialChunksCompanion.insert(
+              id: 'chunk-1',
+              learningMaterialId: 'material-1',
+              orderNo: 1,
+              title: const Value('Offline Material'),
+              content: 'Offline material content',
+              difficultyLevel: 1,
+              estimatedStudyMinutes: 40,
+              characterCount: 24,
+              syncStatus: const Value('pending'),
+              updatedAtUtc: Value(DateTime.utc(2026, 5, 1, 9)),
+            ),
+          );
+      await database
+          .into(database.syncOutbox)
+          .insert(
+            SyncOutboxCompanion.insert(
+              id: 'create-material-material-1',
+              operationType: 'MaterialCreated',
+              entityType: 'Material',
+              entityId: 'material-1',
+              payload: '{"materialId":"material-1","defaultChunkId":"chunk-1"}',
+              createdAtUtc: DateTime.utc(2026, 5, 1, 9),
+            ),
+          );
+
+      final service = _FakeSyncService(
+        response: (operations) =>
+            _response(operations, statusFor: (_) => 'applied'),
+      );
+      final repository = SyncRepository(database: database, service: service);
+
+      final result = await repository.pushPendingOperations();
+
+      final material = await database
+          .select(database.localMaterials)
+          .getSingle();
+      final chunk = await database
+          .select(database.localMaterialChunks)
+          .getSingle();
+      final outboxOperation = await database
+          .select(database.syncOutbox)
+          .getSingle();
+
+      expect(service.operations.single.operationType, 'MaterialCreated');
+      expect(result.syncedCount, 1);
+      expect(material.syncStatus, 'synced');
+      expect(chunk.syncStatus, 'synced');
+      expect(outboxOperation.status, 'synced');
+    },
+  );
+
+  test('marks material chunk terminal failures as conflicts', () async {
+    await database
+        .into(database.localMaterialChunks)
+        .insert(
+          LocalMaterialChunksCompanion.insert(
+            id: 'chunk-1',
+            learningMaterialId: 'material-1',
+            orderNo: 1,
+            title: const Value('Offline Chunk'),
+            content: 'Offline chunk content',
+            difficultyLevel: 2,
+            estimatedStudyMinutes: 15,
+            characterCount: 21,
+            syncStatus: const Value('pending'),
+            updatedAtUtc: Value(DateTime.utc(2026, 5, 1, 9)),
+          ),
+        );
+    await database
+        .into(database.syncOutbox)
+        .insert(
+          SyncOutboxCompanion.insert(
+            id: 'update-chunk-chunk-1',
+            operationType: 'MaterialChunkUpdated',
+            entityType: 'MaterialChunk',
+            entityId: 'chunk-1',
+            payload: '{"materialId":"material-1","chunkId":"chunk-1"}',
+            createdAtUtc: DateTime.utc(2026, 5, 1, 9),
+          ),
+        );
+
+    final service = _FakeSyncService(
+      response: (operations) => _response(
+        operations,
+        statusFor: (_) => 'failed',
+        errorFor: (_) => 'material_chunk_not_found: Chunk missing.',
+      ),
+    );
+    final repository = SyncRepository(database: database, service: service);
+
+    final result = await repository.pushPendingOperations();
+
+    final chunk = await database
+        .select(database.localMaterialChunks)
+        .getSingle();
+    final outboxOperation = await database
+        .select(database.syncOutbox)
+        .getSingle();
+
+    expect(result.conflictCount, 1);
+    expect(result.retryCount, 0);
+    expect(chunk.syncStatus, 'conflict');
+    expect(outboxOperation.status, 'conflict');
+    expect(outboxOperation.nextAttemptAtUtc, isNull);
+  });
+
+  test(
     'does not mark a session synced while another operation is pending',
     () async {
       final session = _session();

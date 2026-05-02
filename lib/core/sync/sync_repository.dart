@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:mentorax/core/database/app_database.dart';
 import 'package:mentorax/features/dashboard/data/dashboard_local_data_source.dart';
@@ -35,9 +37,23 @@ class SyncRepository {
     'sync_invalid_payload',
     'sync_session_id_required',
     'sync_plan_id_required',
+    'sync_material_id_required',
+    'sync_chunk_id_required',
     'sync_payload_field_required',
     'sync_payload_field_invalid',
     'sync_operation_not_supported',
+    'sync_operation_id_required',
+    'learning_material_not_found',
+    'material_chunk_not_found',
+    'material_id_conflict',
+    'material_chunk_id_conflict',
+    'chunk_content_required',
+    'invalid_difficulty_level',
+    'invalid_estimated_study_minutes',
+    'chunk_is_used_in_study_plan',
+    'chunk_order_required',
+    'invalid_chunk_order_count',
+    'invalid_chunk_order_ids',
   };
 
   final AppDatabase _database;
@@ -367,6 +383,10 @@ class SyncRepository {
         (item) => item.status != _syncedStatus,
       );
 
+      if (operation.operationType == 'MaterialCreated') {
+        await _markMaterialCreatedDefaultChunkSyncedIfSafe(operation, now);
+      }
+
       if (!hasUnsyncedEntityOperation) {
         switch (operation.entityType) {
           case 'StudySession':
@@ -384,6 +404,26 @@ class SyncRepository {
               _database.localStudyPlans,
             )..where((row) => row.id.equals(operation.entityId))).write(
               LocalStudyPlansCompanion(
+                syncStatus: const Value(_syncedStatus),
+                updatedAtUtc: Value(now),
+              ),
+            );
+            break;
+          case 'Material':
+            await (_database.update(
+              _database.localMaterials,
+            )..where((row) => row.id.equals(operation.entityId))).write(
+              LocalMaterialsCompanion(
+                syncStatus: const Value(_syncedStatus),
+                updatedAtUtc: Value(now),
+              ),
+            );
+            break;
+          case 'MaterialChunk':
+            await (_database.update(
+              _database.localMaterialChunks,
+            )..where((row) => row.id.equals(operation.entityId))).write(
+              LocalMaterialChunksCompanion(
                 syncStatus: const Value(_syncedStatus),
                 updatedAtUtc: Value(now),
               ),
@@ -453,7 +493,81 @@ class SyncRepository {
           ),
         );
       }
+
+      if (operation.entityType == 'Material') {
+        await (_database.update(
+          _database.localMaterials,
+        )..where((row) => row.id.equals(operation.entityId))).write(
+          LocalMaterialsCompanion(
+            syncStatus: const Value(_conflictStatus),
+            updatedAtUtc: Value(now),
+          ),
+        );
+
+        if (operation.operationType == 'MaterialCreated') {
+          await _markMaterialCreatedDefaultChunkConflict(operation, now);
+        }
+      }
+
+      if (operation.entityType == 'MaterialChunk') {
+        await (_database.update(
+          _database.localMaterialChunks,
+        )..where((row) => row.id.equals(operation.entityId))).write(
+          LocalMaterialChunksCompanion(
+            syncStatus: const Value(_conflictStatus),
+            updatedAtUtc: Value(now),
+          ),
+        );
+      }
     });
+  }
+
+  Future<void> _markMaterialCreatedDefaultChunkSyncedIfSafe(
+    SyncOutboxData operation,
+    DateTime now,
+  ) async {
+    final chunkId = _defaultChunkIdFromMaterialCreated(operation);
+    if (chunkId == null) return;
+
+    final chunkOperations =
+        await (_database.select(_database.syncOutbox)..where(
+              (row) =>
+                  row.entityType.equals('MaterialChunk') &
+                  row.entityId.equals(chunkId),
+            ))
+            .get();
+
+    final hasUnsyncedChunkOperation = chunkOperations.any(
+      (item) => item.status != _syncedStatus,
+    );
+
+    if (hasUnsyncedChunkOperation) return;
+
+    await (_database.update(
+      _database.localMaterialChunks,
+    )..where((row) => row.id.equals(chunkId))).write(
+      LocalMaterialChunksCompanion(
+        syncStatus: const Value(_syncedStatus),
+        updatedAtUtc: Value(now),
+      ),
+    );
+  }
+
+  Future<void> _markMaterialCreatedDefaultChunkConflict(
+    SyncOutboxData operation,
+    DateTime now,
+  ) async {
+    final chunkId = _defaultChunkIdFromMaterialCreated(operation);
+    if (chunkId == null) return;
+
+    await (_database.update(
+      _database.localMaterialChunks,
+    )..where((row) => row.id.equals(chunkId))).write(
+      LocalMaterialChunksCompanion(
+        syncStatus: const Value(_conflictStatus),
+        updatedAtUtc: Value(now),
+      ),
+    );
   }
 
   Duration _retryDelay(int retryCount) {
@@ -481,5 +595,17 @@ class SyncRepository {
     return _terminalErrorCodes.any(
       (code) => result.error!.startsWith('$code:'),
     );
+  }
+
+  String? _defaultChunkIdFromMaterialCreated(SyncOutboxData operation) {
+    try {
+      final payload = jsonDecode(operation.payload);
+      if (payload is! Map) return null;
+
+      return payload['defaultChunkId']?.toString() ??
+          payload['chunkId']?.toString();
+    } on FormatException {
+      return null;
+    }
   }
 }

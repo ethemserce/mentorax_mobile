@@ -19,8 +19,12 @@ class MaterialRepository {
   Future<MaterialModel> createMaterial(
     CreateMaterialRequestModel request,
   ) async {
+    final local = _local;
+    if (local != null) {
+      return local.createMaterialLocally(request);
+    }
+
     final material = await _service.createMaterial(request);
-    await _local?.cacheMaterial(material);
 
     return material;
   }
@@ -74,6 +78,12 @@ class MaterialRepository {
     required String materialId,
     required CreateMaterialChunkRequest request,
   }) async {
+    final localChunk = await _local?.createChunkLocally(
+      materialId: materialId,
+      request: request,
+    );
+    if (localChunk != null) return localChunk;
+
     final chunk = await _service.createMaterialChunk(
       materialId: materialId,
       request: request,
@@ -88,6 +98,13 @@ class MaterialRepository {
     required String chunkId,
     required UpdateMaterialChunkRequest request,
   }) async {
+    final localChunk = await _local?.updateChunkLocally(
+      materialId: materialId,
+      chunkId: chunkId,
+      request: request,
+    );
+    if (localChunk != null) return localChunk;
+
     final chunk = await _service.updateMaterialChunk(
       materialId: materialId,
       chunkId: chunkId,
@@ -102,6 +119,12 @@ class MaterialRepository {
     required String materialId,
     required String chunkId,
   }) async {
+    final deletedLocally = await _local?.deleteChunkLocally(
+      materialId: materialId,
+      chunkId: chunkId,
+    );
+    if (deletedLocally == true) return;
+
     await _service.deleteMaterialChunk(
       materialId: materialId,
       chunkId: chunkId,
@@ -113,6 +136,12 @@ class MaterialRepository {
     required String materialId,
     required List<String> chunkIds,
   }) async {
+    final localChunks = await _local?.reorderChunksLocally(
+      materialId: materialId,
+      chunkIds: chunkIds,
+    );
+    if (localChunks != null) return localChunks;
+
     final chunks = await _service.reorderMaterialChunks(
       materialId: materialId,
       chunkIds: chunkIds,

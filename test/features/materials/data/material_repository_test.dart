@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mentorax/core/database/app_database.dart';
@@ -68,33 +70,99 @@ void main() {
     expect(cachedChunks.single.title, 'Server Chunk');
   });
 
-  test('successful chunk writes keep local cache current', () async {
-    final service = _FakeMaterialService(
-      createdChunk: _chunk(id: 'chunk-1', title: 'Created Chunk'),
-      updatedChunk: _chunk(id: 'chunk-1', title: 'Updated Chunk'),
-      reorderedChunks: [
-        _chunk(id: 'chunk-2', orderNo: 1, title: 'Second'),
-        _chunk(id: 'chunk-1', orderNo: 2, title: 'Updated Chunk'),
-      ],
-    );
+  test(
+    'repository creates materials locally and queues sync operation',
+    () async {
+      final service = _FakeMaterialService();
+      final repository = MaterialRepository(service: service, local: local);
+
+      final material = await repository.createMaterial(
+        CreateMaterialRequestModel(
+          title: 'Offline Material',
+          materialType: 'Text',
+          content: 'Offline material content',
+          estimatedDurationMinutes: 40,
+          description: 'Offline description',
+          tags: 'offline,sync',
+        ),
+      );
+
+      final localMaterial = await database
+          .select(database.localMaterials)
+          .getSingle();
+      final defaultChunk = await database
+          .select(database.localMaterialChunks)
+          .getSingle();
+      final outboxOperation = await database
+          .select(database.syncOutbox)
+          .getSingle();
+      final payload =
+          jsonDecode(outboxOperation.payload) as Map<String, dynamic>;
+
+      expect(service.createMaterialCalls, 0);
+      expect(material.id, localMaterial.id);
+      expect(localMaterial.title, 'Offline Material');
+      expect(localMaterial.syncStatus, 'pending');
+      expect(defaultChunk.learningMaterialId, material.id);
+      expect(defaultChunk.syncStatus, 'pending');
+      expect(outboxOperation.operationType, 'MaterialCreated');
+      expect(outboxOperation.entityType, 'Material');
+      expect(outboxOperation.entityId, material.id);
+      expect(payload['materialId'], material.id);
+      expect(payload['defaultChunkId'], defaultChunk.id);
+      expect(payload['title'], 'Offline Material');
+    },
+  );
+
+  test('repository writes chunks locally and queues sync operations', () async {
+    final service = _FakeMaterialService();
     final repository = MaterialRepository(service: service, local: local);
 
-    await repository.createMaterialChunk(
+    await local.cacheMaterial(_material(id: 'material-1', title: 'Material'));
+
+    final firstChunk = await repository.createMaterialChunk(
       materialId: 'material-1',
       request: CreateMaterialChunkRequest(
-        title: 'Created Chunk',
-        content: 'Created content',
+        title: 'First Chunk',
+        content: 'First content',
         summary: null,
         keywords: null,
         difficultyLevel: 1,
         estimatedStudyMinutes: 10,
       ),
     );
-    expect((await local.getChunks('material-1')).single.title, 'Created Chunk');
-
-    await repository.updateMaterialChunk(
+    final secondChunk = await repository.createMaterialChunk(
       materialId: 'material-1',
-      chunkId: 'chunk-1',
+      request: CreateMaterialChunkRequest(
+        title: 'Second Chunk',
+        content: 'Second content',
+        summary: 'Second summary',
+        keywords: 'second',
+        difficultyLevel: 2,
+        estimatedStudyMinutes: 12,
+      ),
+    );
+
+    final thirdChunk = await repository.createMaterialChunk(
+      materialId: 'material-1',
+      request: CreateMaterialChunkRequest(
+        title: 'Third Chunk',
+        content: 'Third content',
+        summary: null,
+        keywords: null,
+        difficultyLevel: 1,
+        estimatedStudyMinutes: 10,
+      ),
+    );
+    expect((await local.getChunks('material-1')).map((chunk) => chunk.title), [
+      'First Chunk',
+      'Second Chunk',
+      'Third Chunk',
+    ]);
+
+    final updatedChunk = await repository.updateMaterialChunk(
+      materialId: 'material-1',
+      chunkId: firstChunk.id,
       request: UpdateMaterialChunkRequest(
         title: 'Updated Chunk',
         content: 'Updated content',
@@ -104,24 +172,47 @@ void main() {
         estimatedStudyMinutes: 12,
       ),
     );
-    expect((await local.getChunks('material-1')).single.title, 'Updated Chunk');
+    expect(updatedChunk.title, 'Updated Chunk');
 
     await repository.reorderMaterialChunks(
       materialId: 'material-1',
-      chunkIds: ['chunk-2', 'chunk-1'],
+      chunkIds: [secondChunk.id, firstChunk.id, thirdChunk.id],
     );
     expect((await local.getChunks('material-1')).map((chunk) => chunk.id), [
-      'chunk-2',
-      'chunk-1',
+      secondChunk.id,
+      firstChunk.id,
+      thirdChunk.id,
     ]);
 
     await repository.deleteMaterialChunk(
       materialId: 'material-1',
-      chunkId: 'chunk-1',
+      chunkId: firstChunk.id,
     );
     expect((await local.getChunks('material-1')).map((chunk) => chunk.id), [
-      'chunk-2',
+      secondChunk.id,
+      thirdChunk.id,
     ]);
+
+    final deletedChunk = await (database.select(
+      database.localMaterialChunks,
+    )..where((row) => row.id.equals(firstChunk.id))).getSingle();
+    final outboxOperations = await database.select(database.syncOutbox).get();
+
+    expect(service.createChunkCalls, 0);
+    expect(service.updateChunkCalls, 0);
+    expect(service.reorderChunkCalls, 0);
+    expect(service.deleteChunkCalls, 0);
+    expect(deletedChunk.isDeleted, isTrue);
+    expect(deletedChunk.syncStatus, 'pending');
+    expect(
+      outboxOperations.map((operation) => operation.operationType),
+      containsAll([
+        'MaterialChunkCreated',
+        'MaterialChunkUpdated',
+        'MaterialChunksReordered',
+        'MaterialChunkDeleted',
+      ]),
+    );
   });
 }
 
@@ -166,24 +257,24 @@ class _FakeMaterialService extends MaterialService {
   List<MaterialModel> materials;
   MaterialModel? material;
   List<MaterialChunkModel> chunks;
-  MaterialChunkModel? createdChunk;
-  MaterialChunkModel? updatedChunk;
-  List<MaterialChunkModel>? reorderedChunks;
   bool failReads = false;
+  int createMaterialCalls = 0;
+  int createChunkCalls = 0;
+  int updateChunkCalls = 0;
+  int deleteChunkCalls = 0;
+  int reorderChunkCalls = 0;
 
   _FakeMaterialService({
     this.materials = const [],
     this.material,
     this.chunks = const [],
-    this.createdChunk,
-    this.updatedChunk,
-    this.reorderedChunks,
   });
 
   @override
   Future<MaterialModel> createMaterial(
     CreateMaterialRequestModel request,
   ) async {
+    createMaterialCalls += 1;
     return _material(title: request.title);
   }
 
@@ -210,8 +301,8 @@ class _FakeMaterialService extends MaterialService {
     required String materialId,
     required CreateMaterialChunkRequest request,
   }) async {
-    return createdChunk ??
-        _chunk(materialId: materialId, title: request.title ?? 'Chunk');
+    createChunkCalls += 1;
+    return _chunk(materialId: materialId, title: request.title ?? 'Chunk');
   }
 
   @override
@@ -220,25 +311,28 @@ class _FakeMaterialService extends MaterialService {
     required String chunkId,
     required UpdateMaterialChunkRequest request,
   }) async {
-    return updatedChunk ??
-        _chunk(
-          id: chunkId,
-          materialId: materialId,
-          title: request.title ?? 'Chunk',
-        );
+    updateChunkCalls += 1;
+    return _chunk(
+      id: chunkId,
+      materialId: materialId,
+      title: request.title ?? 'Chunk',
+    );
   }
 
   @override
   Future<void> deleteMaterialChunk({
     required String materialId,
     required String chunkId,
-  }) async {}
+  }) async {
+    deleteChunkCalls += 1;
+  }
 
   @override
   Future<List<MaterialChunkModel>> reorderMaterialChunks({
     required String materialId,
     required List<String> chunkIds,
   }) async {
-    return reorderedChunks ?? chunks;
+    reorderChunkCalls += 1;
+    return chunks;
   }
 }
