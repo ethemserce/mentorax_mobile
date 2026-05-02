@@ -26,9 +26,15 @@ class SyncRepository {
   static const _terminalErrorCodes = {
     'study_session_not_found',
     'session_plan_not_found',
+    'study_plan_not_found',
     'study_plan_not_active',
+    'cancelled_plan_cannot_be_resumed',
+    'completed_plan_cannot_be_resumed',
+    'completed_plan_cannot_be_cancelled',
+    'cancelled_plan_cannot_be_completed',
     'sync_invalid_payload',
     'sync_session_id_required',
+    'sync_plan_id_required',
     'sync_payload_field_required',
     'sync_payload_field_invalid',
     'sync_operation_not_supported',
@@ -361,16 +367,29 @@ class SyncRepository {
         (item) => item.status != _syncedStatus,
       );
 
-      if (!hasUnsyncedEntityOperation &&
-          operation.entityType == 'StudySession') {
-        await (_database.update(
-          _database.localStudySessions,
-        )..where((row) => row.id.equals(operation.entityId))).write(
-          LocalStudySessionsCompanion(
-            syncStatus: const Value(_syncedStatus),
-            updatedAtUtc: Value(now),
-          ),
-        );
+      if (!hasUnsyncedEntityOperation) {
+        switch (operation.entityType) {
+          case 'StudySession':
+            await (_database.update(
+              _database.localStudySessions,
+            )..where((row) => row.id.equals(operation.entityId))).write(
+              LocalStudySessionsCompanion(
+                syncStatus: const Value(_syncedStatus),
+                updatedAtUtc: Value(now),
+              ),
+            );
+            break;
+          case 'StudyPlan':
+            await (_database.update(
+              _database.localStudyPlans,
+            )..where((row) => row.id.equals(operation.entityId))).write(
+              LocalStudyPlansCompanion(
+                syncStatus: const Value(_syncedStatus),
+                updatedAtUtc: Value(now),
+              ),
+            );
+            break;
+        }
       }
     });
   }
@@ -418,6 +437,17 @@ class SyncRepository {
           _database.localStudySessions,
         )..where((row) => row.id.equals(operation.entityId))).write(
           LocalStudySessionsCompanion(
+            syncStatus: const Value(_conflictStatus),
+            updatedAtUtc: Value(now),
+          ),
+        );
+      }
+
+      if (operation.entityType == 'StudyPlan') {
+        await (_database.update(
+          _database.localStudyPlans,
+        )..where((row) => row.id.equals(operation.entityId))).write(
+          LocalStudyPlansCompanion(
             syncStatus: const Value(_conflictStatus),
             updatedAtUtc: Value(now),
           ),

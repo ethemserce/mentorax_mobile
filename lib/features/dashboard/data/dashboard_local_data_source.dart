@@ -197,9 +197,7 @@ class DashboardLocalDataSource {
   }
 
   Future<MobileDashboardModel?> getDashboard() async {
-    final sessions = await (_database.select(
-      _database.localStudySessions,
-    )..where((row) => row.isDeleted.equals(false))).get();
+    final sessions = await _dashboardSessionRows();
 
     if (sessions.isEmpty) return null;
 
@@ -237,14 +235,27 @@ class DashboardLocalDataSource {
   }
 
   Future<LocalStudySession?> _nextPendingSessionRow() {
-    return (_database.select(_database.localStudySessions)
-          ..where(
-            (row) =>
-                row.isCompleted.equals(false) & row.isDeleted.equals(false),
-          )
-          ..orderBy([(row) => OrderingTerm.asc(row.scheduledAtUtc)])
-          ..limit(1))
-        .getSingleOrNull();
+    return _dashboardSessionRows().then((sessions) {
+      final pendingSessions =
+          sessions.where((session) => !session.isCompleted).toList()
+            ..sort((a, b) => a.scheduledAtUtc.compareTo(b.scheduledAtUtc));
+
+      return pendingSessions.isEmpty ? null : pendingSessions.first;
+    });
+  }
+
+  Future<List<LocalStudySession>> _dashboardSessionRows() async {
+    final sessions = await (_database.select(
+      _database.localStudySessions,
+    )..where((row) => row.isDeleted.equals(false))).get();
+
+    final plans = await _database.select(_database.localStudyPlans).get();
+    final planStatusById = {for (final plan in plans) plan.id: plan.status};
+
+    return sessions.where((session) {
+      final planStatus = planStatusById[session.studyPlanId];
+      return planStatus == null || planStatus == 'Active';
+    }).toList();
   }
 }
 

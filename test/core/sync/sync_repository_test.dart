@@ -129,6 +129,59 @@ void main() {
   });
 
   test(
+    'pushes study plan lifecycle operations and marks plan synced',
+    () async {
+      await database
+          .into(database.localStudyPlans)
+          .insert(
+            LocalStudyPlansCompanion.insert(
+              id: 'plan-1',
+              userId: 'user-1',
+              learningMaterialId: 'material-1',
+              title: 'Offline Plan',
+              startDate: '2026-05-01',
+              dailyTargetMinutes: 25,
+              status: 'Paused',
+              syncStatus: const Value('pending'),
+              updatedAtUtc: Value(DateTime.utc(2026, 5, 1, 9)),
+            ),
+          );
+      await database
+          .into(database.syncOutbox)
+          .insert(
+            SyncOutboxCompanion.insert(
+              id: 'pause-plan-plan-1',
+              operationType: 'StudyPlanPaused',
+              entityType: 'StudyPlan',
+              entityId: 'plan-1',
+              payload: '{"planId":"plan-1"}',
+              createdAtUtc: DateTime.utc(2026, 5, 1, 9),
+            ),
+          );
+
+      final service = _FakeSyncService(
+        response: (operations) =>
+            _response(operations, statusFor: (_) => 'applied'),
+      );
+      final repository = SyncRepository(database: database, service: service);
+
+      final result = await repository.pushPendingOperations();
+
+      final localPlan = await database
+          .select(database.localStudyPlans)
+          .getSingle();
+      final outboxOperation = await database
+          .select(database.syncOutbox)
+          .getSingle();
+
+      expect(service.operations.single.operationType, 'StudyPlanPaused');
+      expect(result.syncedCount, 1);
+      expect(localPlan.syncStatus, 'synced');
+      expect(outboxOperation.status, 'synced');
+    },
+  );
+
+  test(
     'does not mark a session synced while another operation is pending',
     () async {
       final session = _session();

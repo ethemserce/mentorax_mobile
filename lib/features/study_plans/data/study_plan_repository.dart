@@ -49,11 +49,56 @@ class StudyPlanRepository {
     }
   }
 
-  Future<void> pausePlan(String id) => _remote.pausePlan(id);
+  Future<void> pausePlan(String id) {
+    return _applyLifecycleOperation(
+      applyLocal: () => _local.markPlanPausedLocally(id),
+      applyRemote: () => _remote.pausePlan(id),
+      markSynced: () => _local.markPlanPauseSynced(id),
+    );
+  }
 
-  Future<void> resumePlan(String id) => _remote.resumePlan(id);
+  Future<void> resumePlan(String id) {
+    return _applyLifecycleOperation(
+      applyLocal: () => _local.markPlanResumedLocally(id),
+      applyRemote: () => _remote.resumePlan(id),
+      markSynced: () => _local.markPlanResumeSynced(id),
+    );
+  }
 
-  Future<void> cancelPlan(String id) => _remote.cancelPlan(id);
+  Future<void> cancelPlan(String id) {
+    return _applyLifecycleOperation(
+      applyLocal: () => _local.markPlanCancelledLocally(id),
+      applyRemote: () => _remote.cancelPlan(id),
+      markSynced: () => _local.markPlanCancelSynced(id),
+    );
+  }
 
-  Future<void> completePlan(String id) => _remote.completePlan(id);
+  Future<void> completePlan(String id) {
+    return _applyLifecycleOperation(
+      applyLocal: () => _local.markPlanCompletedLocally(id),
+      applyRemote: () => _remote.completePlan(id),
+      markSynced: () => _local.markPlanCompleteSynced(id),
+    );
+  }
+
+  Future<void> _applyLifecycleOperation({
+    required Future<bool> Function() applyLocal,
+    required Future<void> Function() applyRemote,
+    required Future<void> Function() markSynced,
+  }) async {
+    final appliedLocally = await applyLocal();
+
+    if (appliedLocally) {
+      try {
+        await applyRemote();
+        await markSynced();
+      } catch (_) {
+        return;
+      }
+
+      return;
+    }
+
+    await applyRemote();
+  }
 }

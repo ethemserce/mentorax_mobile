@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:mentorax/core/database/app_database.dart';
 import 'package:mentorax/features/materials/data/models/material_chunk_model.dart';
@@ -148,6 +150,184 @@ class StudyPlanLocalDataSource {
       sessions: await _getPlanDetailSessions(plan.id),
       items: await _getPlanItems(plan.id),
     );
+  }
+
+  Future<bool> markPlanPausedLocally(String planId) {
+    return _markPlanLifecycleLocally(
+      planId: planId,
+      status: 'Paused',
+      operationType: 'StudyPlanPaused',
+      operationId: _pauseOperationId(planId),
+    );
+  }
+
+  Future<bool> markPlanResumedLocally(String planId) {
+    return _markPlanLifecycleLocally(
+      planId: planId,
+      status: 'Active',
+      operationType: 'StudyPlanResumed',
+      operationId: _resumeOperationId(planId),
+    );
+  }
+
+  Future<bool> markPlanCancelledLocally(String planId) {
+    return _markPlanLifecycleLocally(
+      planId: planId,
+      status: 'Cancelled',
+      operationType: 'StudyPlanCancelled',
+      operationId: _cancelOperationId(planId),
+      cancelIncompleteItems: true,
+    );
+  }
+
+  Future<bool> markPlanCompletedLocally(String planId) {
+    return _markPlanLifecycleLocally(
+      planId: planId,
+      status: 'Completed',
+      operationType: 'StudyPlanCompleted',
+      operationId: _completeOperationId(planId),
+      cancelIncompleteItems: true,
+    );
+  }
+
+  Future<void> markPlanPauseSynced(String planId) {
+    return _markPlanLifecycleSynced(planId, _pauseOperationId(planId));
+  }
+
+  Future<void> markPlanResumeSynced(String planId) {
+    return _markPlanLifecycleSynced(planId, _resumeOperationId(planId));
+  }
+
+  Future<void> markPlanCancelSynced(String planId) {
+    return _markPlanLifecycleSynced(planId, _cancelOperationId(planId));
+  }
+
+  Future<void> markPlanCompleteSynced(String planId) {
+    return _markPlanLifecycleSynced(planId, _completeOperationId(planId));
+  }
+
+  Future<bool> _markPlanLifecycleLocally({
+    required String planId,
+    required String status,
+    required String operationType,
+    required String operationId,
+    bool cancelIncompleteItems = false,
+  }) async {
+    final existing = await (_database.select(
+      _database.localStudyPlans,
+    )..where((row) => row.id.equals(planId))).getSingleOrNull();
+
+    if (existing == null) return false;
+
+    final occurredAt = DateTime.now().toUtc();
+
+    await _database.transaction(() async {
+      await (_database.update(
+        _database.localStudyPlans,
+      )..where((row) => row.id.equals(planId))).write(
+        LocalStudyPlansCompanion(
+          status: Value(status),
+          syncStatus: const Value('pending'),
+          updatedAtUtc: Value(occurredAt),
+        ),
+      );
+
+      if (cancelIncompleteItems) {
+        await _markIncompletePlanItemsCancelled(planId, occurredAt);
+        await (_database.update(_database.localStudySessions)..where(
+              (row) =>
+                  row.studyPlanId.equals(planId) &
+                  row.isCompleted.equals(false),
+            ))
+            .write(
+              LocalStudySessionsCompanion(updatedAtUtc: Value(occurredAt)),
+            );
+      }
+
+      await _database
+          .into(_database.syncOutbox)
+          .insert(
+            SyncOutboxCompanion.insert(
+              id: operationId,
+              operationType: operationType,
+              entityType: 'StudyPlan',
+              entityId: planId,
+              payload: jsonEncode({
+                'planId': planId,
+                'status': status,
+                'occurredAtUtc': occurredAt.toIso8601String(),
+              }),
+              createdAtUtc: occurredAt,
+              updatedAtUtc: Value(occurredAt),
+            ),
+            mode: InsertMode.insertOrReplace,
+          );
+    });
+
+    return true;
+  }
+
+  Future<void> _markIncompletePlanItemsCancelled(
+    String planId,
+    DateTime updatedAt,
+  ) async {
+    final items = await (_database.select(
+      _database.localStudyPlanItems,
+    )..where((row) => row.studyPlanId.equals(planId))).get();
+
+    for (final item in items.where((item) => item.status != 'Completed')) {
+      await (_database.update(
+        _database.localStudyPlanItems,
+      )..where((row) => row.id.equals(item.id))).write(
+        LocalStudyPlanItemsCompanion(
+          status: const Value('Cancelled'),
+          updatedAtUtc: Value(updatedAt),
+        ),
+      );
+    }
+  }
+
+  Future<void> _markPlanLifecycleSynced(
+    String planId,
+    String operationId,
+  ) async {
+    final now = DateTime.now().toUtc();
+
+    await _database.transaction(() async {
+      await (_database.update(
+        _database.syncOutbox,
+      )..where((row) => row.id.equals(operationId))).write(
+        SyncOutboxCompanion(
+          status: const Value('synced'),
+          lastError: const Value(null),
+          nextAttemptAtUtc: const Value(null),
+          updatedAtUtc: Value(now),
+        ),
+      );
+
+      final entityOperations =
+          await (_database.select(_database.syncOutbox)..where(
+                (row) =>
+                    row.entityType.equals('StudyPlan') &
+                    row.entityId.equals(planId),
+              ))
+              .get();
+
+      final hasUnsyncedEntityOperation = entityOperations.any(
+        (operation) => operation.status != 'synced',
+      );
+
+      if (!hasUnsyncedEntityOperation) {
+        await (_database.update(
+          _database.localStudyPlans,
+        )..where((row) => row.id.equals(planId))).write(
+          LocalStudyPlansCompanion(
+            syncStatus: const Value('synced'),
+            updatedAtUtc: Value(now),
+          ),
+        );
+      }
+    });
   }
 
   Future<List<StudyPlanSessionModel>> _getPlanSessions(String planId) async {
@@ -462,6 +642,14 @@ class StudyPlanLocalDataSource {
     );
   }
 }
+
+String _pauseOperationId(String planId) => 'pause-plan-$planId';
+
+String _resumeOperationId(String planId) => 'resume-plan-$planId';
+
+String _cancelOperationId(String planId) => 'cancel-plan-$planId';
+
+String _completeOperationId(String planId) => 'complete-plan-$planId';
 
 class _ActiveSessionSnapshot {
   final DateTime startedAtUtc;

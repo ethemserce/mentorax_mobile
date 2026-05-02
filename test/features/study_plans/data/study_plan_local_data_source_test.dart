@@ -81,6 +81,78 @@ void main() {
     expect(localSession.status, 'InProgress');
     expect(localSession.syncStatus, 'pending');
   });
+
+  test('repository pauses cached plans locally when remote fails', () async {
+    final plan = _samplePlan();
+    final repository = StudyPlanRepository(
+      remote: _FailingStudyPlanService(),
+      local: studyPlans,
+    );
+
+    await studyPlans.cachePlans([plan]);
+
+    await repository.pausePlan(plan.id);
+
+    final localPlan = await database
+        .select(database.localStudyPlans)
+        .getSingle();
+    final outboxOperation = await database
+        .select(database.syncOutbox)
+        .getSingle();
+
+    expect(localPlan.status, 'Paused');
+    expect(localPlan.syncStatus, 'pending');
+    expect(outboxOperation.id, 'pause-plan-${plan.id}');
+    expect(outboxOperation.operationType, 'StudyPlanPaused');
+    expect(outboxOperation.entityType, 'StudyPlan');
+    expect(outboxOperation.entityId, plan.id);
+    expect(outboxOperation.status, 'pending');
+  });
+
+  test('paused local plans are excluded from dashboard next session', () async {
+    final plan = _samplePlan();
+
+    await studyPlans.cachePlans([plan]);
+    await studyPlans.markPlanPausedLocally(plan.id);
+
+    final nextSession = await dashboard.getNextSession();
+    final localDashboard = await dashboard.getDashboard();
+
+    expect(nextSession, isNull);
+    expect(localDashboard, isNull);
+  });
+
+  test(
+    'repository marks completed plans synced when remote complete succeeds',
+    () async {
+      final plan = _samplePlan();
+      final repository = StudyPlanRepository(
+        remote: _SuccessfulStudyPlanService(),
+        local: studyPlans,
+      );
+
+      await studyPlans.cachePlans([plan]);
+
+      await repository.completePlan(plan.id);
+
+      final localPlan = await database
+          .select(database.localStudyPlans)
+          .getSingle();
+      final localItem = await database
+          .select(database.localStudyPlanItems)
+          .getSingle();
+      final outboxOperation = await database
+          .select(database.syncOutbox)
+          .getSingle();
+
+      expect(localPlan.status, 'Completed');
+      expect(localPlan.syncStatus, 'synced');
+      expect(localItem.status, 'Cancelled');
+      expect(outboxOperation.id, 'complete-plan-${plan.id}');
+      expect(outboxOperation.operationType, 'StudyPlanCompleted');
+      expect(outboxOperation.status, 'synced');
+    },
+  );
 }
 
 StudyPlanModel _samplePlan() {
@@ -146,4 +218,38 @@ class _FailingStudyPlanService extends StudyPlanService {
   Future<StudyPlanDetailModel> getPlanById(String planId) {
     throw Exception('network unavailable');
   }
+
+  @override
+  Future<void> pausePlan(String id) {
+    throw Exception('network unavailable');
+  }
+
+  @override
+  Future<void> resumePlan(String id) {
+    throw Exception('network unavailable');
+  }
+
+  @override
+  Future<void> cancelPlan(String id) {
+    throw Exception('network unavailable');
+  }
+
+  @override
+  Future<void> completePlan(String id) {
+    throw Exception('network unavailable');
+  }
+}
+
+class _SuccessfulStudyPlanService extends StudyPlanService {
+  @override
+  Future<void> pausePlan(String id) async {}
+
+  @override
+  Future<void> resumePlan(String id) async {}
+
+  @override
+  Future<void> cancelPlan(String id) async {}
+
+  @override
+  Future<void> completePlan(String id) async {}
 }
