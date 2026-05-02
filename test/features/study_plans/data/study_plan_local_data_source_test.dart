@@ -61,6 +61,26 @@ void main() {
     expect(cachedDetail.id, plan.id);
     expect(cachedDetail.sessions.single.id, 'session-1');
   });
+
+  test('plan cache preserves locally active session start time', () async {
+    final plan = _samplePlan();
+    final startedAt = DateTime.utc(2026, 5, 1, 9);
+
+    await studyPlans.cachePlans([plan]);
+    await dashboard.markSessionStartedLocally(
+      'session-1',
+      startedAtUtc: startedAt,
+    );
+    await studyPlans.cachePlans([plan]);
+
+    final localSession = await database
+        .select(database.localStudySessions)
+        .getSingle();
+
+    expect(localSession.startedAtUtc?.toUtc(), startedAt);
+    expect(localSession.status, 'InProgress');
+    expect(localSession.syncStatus, 'pending');
+  });
 }
 
 StudyPlanModel _samplePlan() {

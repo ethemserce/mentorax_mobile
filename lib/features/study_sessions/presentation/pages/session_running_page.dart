@@ -8,10 +8,32 @@ import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../dashboard/data/models/next_session_model.dart';
 import '../providers/session_timer_providers.dart';
 
-class SessionRunningPage extends ConsumerWidget {
+class SessionRunningPage extends ConsumerStatefulWidget {
   final NextSessionModel session;
 
   const SessionRunningPage({super.key, required this.session});
+
+  @override
+  ConsumerState<SessionRunningPage> createState() => _SessionRunningPageState();
+}
+
+class _SessionRunningPageState extends ConsumerState<SessionRunningPage> {
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      ref
+          .read(sessionTimerProvider.notifier)
+          .start(
+            sessionId: widget.session.sessionId,
+            materialTitle: widget.session.materialTitle,
+            startedAtUtc: widget.session.startedAtUtc,
+          );
+    });
+  }
 
   String _formatDuration(int totalSeconds) {
     final minutes = totalSeconds ~/ 60;
@@ -20,8 +42,9 @@ class SessionRunningPage extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final timerState = ref.watch(sessionTimerProvider);
+    final session = widget.session;
     final progress = session.estimatedMinutes == 0
         ? 0.0
         : min(timerState.elapsedSeconds / (session.estimatedMinutes * 60), 1.0);

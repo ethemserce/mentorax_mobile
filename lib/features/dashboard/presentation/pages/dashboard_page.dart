@@ -174,8 +174,10 @@ class DashboardPage extends ConsumerWidget {
                     title: dashboard.nextSession!.materialTitle,
                     estimatedMinutes: dashboard.nextSession!.estimatedMinutes,
                     isDue: dashboard.nextSession!.isDue,
+                    isStarted: dashboard.nextSession!.startedAtUtc != null,
                     onTap: () {
-                      if (!dashboard.nextSession!.isDue) {
+                      if (!dashboard.nextSession!.isDue &&
+                          dashboard.nextSession!.startedAtUtc == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text(
@@ -399,12 +401,14 @@ class _NextSessionCard extends StatelessWidget {
   final String title;
   final int estimatedMinutes;
   final bool isDue;
+  final bool isStarted;
   final VoidCallback onTap;
 
   const _NextSessionCard({
     required this.title,
     required this.estimatedMinutes,
     required this.isDue,
+    required this.isStarted,
     required this.onTap,
   });
 
@@ -421,14 +425,20 @@ class _NextSessionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: isDue
+                  color: isDue || isStarted
                       ? AppColors.primary.withValues(alpha: 0.12)
                       : Colors.grey.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
-                  isDue ? Icons.play_arrow_rounded : Icons.lock_clock_outlined,
-                  color: isDue ? AppColors.primary : AppColors.textSecondary,
+                  isStarted
+                      ? Icons.pause_circle_outline
+                      : isDue
+                      ? Icons.play_arrow_rounded
+                      : Icons.lock_clock_outlined,
+                  color: isDue || isStarted
+                      ? AppColors.primary
+                      : AppColors.textSecondary,
                   size: 32,
                 ),
               ),
@@ -447,7 +457,9 @@ class _NextSessionCard extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      isDue
+                      isStarted
+                          ? 'Continue session - $estimatedMinutes min target'
+                          : isDue
                           ? 'Ready now - $estimatedMinutes min'
                           : 'Scheduled for later - $estimatedMinutes min',
                       style: const TextStyle(color: AppColors.textSecondary),
@@ -456,9 +468,13 @@ class _NextSessionCard extends StatelessWidget {
                 ),
               ),
               Icon(
-                isDue ? Icons.arrow_forward_ios : Icons.info_outline,
+                isDue || isStarted
+                    ? Icons.arrow_forward_ios
+                    : Icons.info_outline,
                 size: 18,
-                color: isDue ? AppColors.textPrimary : AppColors.textSecondary,
+                color: isDue || isStarted
+                    ? AppColors.textPrimary
+                    : AppColors.textSecondary,
               ),
             ],
           ),

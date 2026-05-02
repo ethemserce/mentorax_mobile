@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mentorax/features/dashboard/data/models/next_session_model.dart';
+import 'package:mentorax/features/study_sessions/data/session_elapsed_time.dart';
 import 'package:mentorax/features/study_sessions/data/models/study_session_detail_model.dart';
 import 'package:mentorax/features/study_sessions/presentation/providers/study_session_providers.dart';
 
@@ -20,12 +21,14 @@ class StudyRoomPage extends ConsumerStatefulWidget {
 }
 
 class _StudyRoomPageState extends ConsumerState<StudyRoomPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final _notesController = TextEditingController();
 
   late final TabController _tabController;
 
   Timer? _timer;
+  DateTime? _timerStartedAtUtc;
+  DateTime? _pausedAtUtc;
   int _elapsedSeconds = 0;
   bool _isRunning = false;
   bool _didRestoreTimer = false;
@@ -39,30 +42,58 @@ class _StudyRoomPageState extends ConsumerState<StudyRoomPage>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _tabController.dispose();
     _notesController.dispose();
     super.dispose();
   }
 
-  void _startTimer() {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _syncElapsedWithClock();
+
+      if (_isRunning) {
+        _ensureTicker();
+      }
+    }
+  }
+
+  void _startTimer({DateTime? startedAtUtc}) {
+    final now = DateTime.now().toUtc();
+    final pausedAt = _pausedAtUtc;
+
+    if (startedAtUtc != null) {
+      _timerStartedAtUtc = startedAtUtc.toUtc();
+    } else if (_timerStartedAtUtc == null) {
+      _timerStartedAtUtc = now;
+    } else if (pausedAt != null) {
+      _timerStartedAtUtc = _timerStartedAtUtc!.add(now.difference(pausedAt));
+    }
+
+    _pausedAtUtc = null;
+    _syncElapsedWithClock();
+
     if (_isRunning) return;
 
     setState(() {
       _isRunning = true;
     });
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
+    _ensureTicker();
+  }
 
-      setState(() {
-        _elapsedSeconds++;
-      });
+  void _ensureTicker() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _syncElapsedWithClock();
     });
   }
 
@@ -74,38 +105,46 @@ class _StudyRoomPageState extends ConsumerState<StudyRoomPage>
     }
 
     _didRestoreTimer = true;
+    _timerStartedAtUtc = session.startedAtUtc!.toUtc();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      final elapsed = DateTime.now()
-          .toUtc()
-          .difference(session.startedAtUtc!)
-          .inSeconds;
-
-      setState(() {
-        _elapsedSeconds = elapsed < 0 ? 0 : elapsed;
-      });
-
-      _startTimer();
+      _startTimer(startedAtUtc: session.startedAtUtc);
     });
   }
 
   void _pauseTimer() {
+    _syncElapsedWithClock();
     _timer?.cancel();
 
     setState(() {
       _isRunning = false;
+      _pausedAtUtc = DateTime.now().toUtc();
     });
   }
 
   void _resetTimer() {
-    _timer?.cancel();
+    _syncElapsedWithClock();
+  }
+
+  void _syncElapsedWithClock() {
+    if (!mounted) return;
+
+    final elapsed = _currentTrackedElapsedSeconds();
+
+    if (elapsed == _elapsedSeconds) return;
 
     setState(() {
-      _isRunning = false;
-      _elapsedSeconds = 0;
+      _elapsedSeconds = elapsed;
     });
+  }
+
+  int _currentTrackedElapsedSeconds() {
+    return SessionElapsedTime.secondsSinceStart(
+      startedAtUtc: _timerStartedAtUtc,
+      nowUtc: _pausedAtUtc,
+    );
   }
 
   String _formatElapsed(int seconds) {
@@ -296,6 +335,10 @@ class _StudyRoomPageState extends ConsumerState<StudyRoomPage>
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () {
+                        final elapsedSeconds = _currentTrackedElapsedSeconds();
+                        setState(() {
+                          _elapsedSeconds = elapsedSeconds;
+                        });
                         _pauseTimer();
 
                         context.push(
@@ -314,7 +357,7 @@ class _StudyRoomPageState extends ConsumerState<StudyRoomPage>
                               ),
                             ),
                             'notes': _buildCombinedNotes(),
-                            'elapsedSeconds': _elapsedSeconds,
+                            'elapsedSeconds': elapsedSeconds,
                           },
                         );
                       },
@@ -711,7 +754,8 @@ class _CompactTimerPanel extends StatelessWidget {
                 ),
                 IconButton(
                   onPressed: onReset,
-                  icon: const Icon(Icons.restart_alt_outlined),
+                  tooltip: 'Refresh tracked time',
+                  icon: const Icon(Icons.update_outlined),
                 ),
               ],
             ),

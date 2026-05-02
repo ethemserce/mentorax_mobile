@@ -75,6 +75,7 @@ class _NextSessionViewState extends ConsumerState<_NextSessionView> {
           .start(
             sessionId: started.sessionId,
             materialTitle: started.materialTitle,
+            startedAtUtc: started.startedAtUtc,
           );
 
       // REFRESH

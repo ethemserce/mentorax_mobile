@@ -13,12 +13,19 @@ class StudyPlanLocalDataSource {
   StudyPlanLocalDataSource(this._database);
 
   Future<void> cachePlans(List<StudyPlanModel> plans) async {
+    final activeSessions = await _activeLocalSessions();
+
     await _database.batch((batch) {
       for (final plan in plans) {
         _writePlan(batch, plan);
 
         for (final session in plan.sessions) {
-          _writePlanSession(batch, session, plan: plan);
+          _writePlanSession(
+            batch,
+            session,
+            plan: plan,
+            activeSessions: activeSessions,
+          );
         }
 
         for (final item in plan.items) {
@@ -30,6 +37,7 @@ class StudyPlanLocalDataSource {
               batch,
               session,
               plan: plan,
+              activeSessions: activeSessions,
               studyPlanItemId: item.id,
               materialTitle: item.materialChunk?.title ?? plan.title,
             );
@@ -40,11 +48,18 @@ class StudyPlanLocalDataSource {
   }
 
   Future<void> cachePlanDetail(StudyPlanDetailModel plan) async {
+    final activeSessions = await _activeLocalSessions();
+
     await _database.batch((batch) {
       _writePlanDetail(batch, plan);
 
       for (final session in plan.sessions) {
-        _writeDetailSession(batch, session, plan: plan);
+        _writeDetailSession(
+          batch,
+          session,
+          plan: plan,
+          activeSessions: activeSessions,
+        );
       }
 
       for (final item in plan.items) {
@@ -56,6 +71,7 @@ class StudyPlanLocalDataSource {
             batch,
             session,
             plan: plan,
+            activeSessions: activeSessions,
             studyPlanItemId: item.id,
             materialTitle: item.materialChunk?.title ?? plan.title,
           );
@@ -90,6 +106,26 @@ class StudyPlanLocalDataSource {
     }
 
     return plans;
+  }
+
+  Future<Map<String, _ActiveSessionSnapshot>> _activeLocalSessions() async {
+    final rows =
+        await (_database.select(_database.localStudySessions)..where(
+              (row) =>
+                  row.startedAtUtc.isNotNull() &
+                  row.isCompleted.equals(false) &
+                  row.isDeleted.equals(false),
+            ))
+            .get();
+
+    return {
+      for (final row in rows)
+        row.id: _ActiveSessionSnapshot(
+          startedAtUtc: row.startedAtUtc!,
+          status: row.status,
+          syncStatus: row.syncStatus,
+        ),
+    };
   }
 
   Future<StudyPlanDetailModel?> getPlanById(String planId) async {
@@ -298,9 +334,14 @@ class StudyPlanLocalDataSource {
     Batch batch,
     StudyPlanSessionModel session, {
     required StudyPlanModel plan,
+    required Map<String, _ActiveSessionSnapshot> activeSessions,
     String? studyPlanItemId,
     String? materialTitle,
   }) {
+    final activeSession = activeSessions[session.id];
+    final shouldPreserveActiveSession =
+        activeSession != null && session.completedAtUtc == null;
+
     batch.insert(
       _database.localStudySessions,
       LocalStudySessionsCompanion.insert(
@@ -311,14 +352,23 @@ class StudyPlanLocalDataSource {
         materialTitle: Value(materialTitle ?? plan.title),
         userId: Value(plan.userId),
         scheduledAtUtc: session.scheduledAtUtc,
-        startedAtUtc: const Value(null),
+        startedAtUtc: Value(
+          shouldPreserveActiveSession ? activeSession.startedAtUtc : null,
+        ),
         completedAtUtc: Value(session.completedAtUtc),
         isCompleted: Value(session.completedAtUtc != null),
         sequenceNumber: Value(session.sequenceNumber),
         plannedDurationMinutes: Value(session.plannedDurationMinutes),
         actualDurationMinutes: Value(session.actualDurationMinutes),
         reviewNotes: Value(session.notes),
-        status: Value(session.status),
+        status: Value(
+          shouldPreserveActiveSession ? activeSession.status : session.status,
+        ),
+        syncStatus: Value(
+          shouldPreserveActiveSession && activeSession.syncStatus == 'pending'
+              ? activeSession.syncStatus
+              : 'synced',
+        ),
         updatedAtUtc: Value(DateTime.now().toUtc()),
       ),
       mode: InsertMode.insertOrReplace,
@@ -329,9 +379,14 @@ class StudyPlanLocalDataSource {
     Batch batch,
     StudyPlanSessionModel session, {
     required StudyPlanDetailModel plan,
+    required Map<String, _ActiveSessionSnapshot> activeSessions,
     String? studyPlanItemId,
     String? materialTitle,
   }) {
+    final activeSession = activeSessions[session.id];
+    final shouldPreserveActiveSession =
+        activeSession != null && session.completedAtUtc == null;
+
     batch.insert(
       _database.localStudySessions,
       LocalStudySessionsCompanion.insert(
@@ -342,14 +397,23 @@ class StudyPlanLocalDataSource {
         materialTitle: Value(materialTitle ?? plan.title),
         userId: Value(plan.userId),
         scheduledAtUtc: session.scheduledAtUtc,
-        startedAtUtc: const Value(null),
+        startedAtUtc: Value(
+          shouldPreserveActiveSession ? activeSession.startedAtUtc : null,
+        ),
         completedAtUtc: Value(session.completedAtUtc),
         isCompleted: Value(session.completedAtUtc != null),
         sequenceNumber: Value(session.sequenceNumber),
         plannedDurationMinutes: Value(session.plannedDurationMinutes),
         actualDurationMinutes: Value(session.actualDurationMinutes),
         reviewNotes: Value(session.notes),
-        status: Value(session.status),
+        status: Value(
+          shouldPreserveActiveSession ? activeSession.status : session.status,
+        ),
+        syncStatus: Value(
+          shouldPreserveActiveSession && activeSession.syncStatus == 'pending'
+              ? activeSession.syncStatus
+              : 'synced',
+        ),
         updatedAtUtc: Value(DateTime.now().toUtc()),
       ),
       mode: InsertMode.insertOrReplace,
@@ -360,7 +424,12 @@ class StudyPlanLocalDataSource {
     Batch batch,
     StudyPlanDetailSessionModel session, {
     required StudyPlanDetailModel plan,
+    required Map<String, _ActiveSessionSnapshot> activeSessions,
   }) {
+    final activeSession = activeSessions[session.id];
+    final shouldPreserveActiveSession =
+        activeSession != null && session.completedAtUtc == null;
+
     batch.insert(
       _database.localStudySessions,
       LocalStudySessionsCompanion.insert(
@@ -370,18 +439,40 @@ class StudyPlanLocalDataSource {
         materialTitle: Value(plan.title),
         userId: Value(plan.userId),
         scheduledAtUtc: session.scheduledAtUtc,
+        startedAtUtc: Value(
+          shouldPreserveActiveSession ? activeSession.startedAtUtc : null,
+        ),
         completedAtUtc: Value(session.completedAtUtc),
         isCompleted: Value(session.completedAtUtc != null),
         sequenceNumber: Value(session.sequenceNumber),
         plannedDurationMinutes: Value(session.plannedDurationMinutes),
         actualDurationMinutes: Value(session.actualDurationMinutes),
         reviewNotes: Value(session.notes),
-        status: Value(session.status),
+        status: Value(
+          shouldPreserveActiveSession ? activeSession.status : session.status,
+        ),
+        syncStatus: Value(
+          shouldPreserveActiveSession && activeSession.syncStatus == 'pending'
+              ? activeSession.syncStatus
+              : 'synced',
+        ),
         updatedAtUtc: Value(DateTime.now().toUtc()),
       ),
       mode: InsertMode.insertOrReplace,
     );
   }
+}
+
+class _ActiveSessionSnapshot {
+  final DateTime startedAtUtc;
+  final String status;
+  final String syncStatus;
+
+  const _ActiveSessionSnapshot({
+    required this.startedAtUtc,
+    required this.status,
+    required this.syncStatus,
+  });
 }
 
 StudyPlanSessionModel _toStudyPlanSessionModel(LocalStudySession session) {

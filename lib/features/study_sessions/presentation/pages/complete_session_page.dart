@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mentorax/core/notifications/study_reminder_service.dart';
 import 'package:mentorax/core/state/app_refresh_controller.dart';
 import 'package:mentorax/features/progress/presentation/providers/progress_providers.dart';
+import 'package:mentorax/features/study_sessions/data/session_elapsed_time.dart';
 import 'package:mentorax/features/study_sessions/presentation/providers/session_timer_providers.dart';
 
 import '../../../../core/constants/app_colors.dart';
@@ -32,6 +33,7 @@ class CompleteSessionPage extends ConsumerStatefulWidget {
 class _CompleteSessionPageState extends ConsumerState<CompleteSessionPage> {
   final _durationController = TextEditingController();
   late final TextEditingController _notesController;
+  late final int _trackedElapsedSeconds;
 
   int _qualityScore = 4;
   int _difficultyScore = 3;
@@ -42,11 +44,15 @@ class _CompleteSessionPageState extends ConsumerState<CompleteSessionPage> {
     super.initState();
 
     _notesController = TextEditingController(text: widget.initialNotes ?? '');
+    final providedElapsedSeconds = widget.elapsedSeconds ?? 0;
+    _trackedElapsedSeconds = providedElapsedSeconds > 0
+        ? providedElapsedSeconds
+        : SessionElapsedTime.secondsSinceStart(
+            startedAtUtc: widget.session.startedAtUtc,
+          );
 
-    final elapsed = widget.elapsedSeconds ?? 0;
-
-    if (elapsed > 0) {
-      final minutes = (elapsed / 60).ceil();
+    if (_trackedElapsedSeconds > 0) {
+      final minutes = SessionElapsedTime.roundedMinutes(_trackedElapsedSeconds);
       _durationController.text = minutes.toString();
     } else {
       _durationController.text = widget.session.estimatedMinutes.toString();
@@ -243,11 +249,9 @@ class _CompleteSessionPageState extends ConsumerState<CompleteSessionPage> {
   }
 
   void _setDurationFromElapsed() {
-    final elapsed = widget.elapsedSeconds ?? 0;
+    if (_trackedElapsedSeconds <= 0) return;
 
-    if (elapsed <= 0) return;
-
-    final minutes = (elapsed / 60).ceil();
+    final minutes = SessionElapsedTime.roundedMinutes(_trackedElapsedSeconds);
 
     setState(() {
       _durationController.text = minutes.toString();
@@ -274,7 +278,7 @@ class _CompleteSessionPageState extends ConsumerState<CompleteSessionPage> {
           children: [
             _HeaderCard(
               materialTitle: session.materialTitle,
-              elapsedText: _formatElapsedSeconds(widget.elapsedSeconds),
+              elapsedText: _formatElapsedSeconds(_trackedElapsedSeconds),
               plannedMinutes: session.estimatedMinutes,
             ),
 
