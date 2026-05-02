@@ -1,16 +1,22 @@
 import 'package:mentorax/features/dashboard/data/models/mobile_dashboard_model.dart';
 import 'package:mentorax/features/dashboard/data/models/next_session_model.dart';
+import 'package:mentorax/features/materials/data/models/material_chunk_model.dart';
+import 'package:mentorax/features/materials/data/models/material_model.dart';
 import 'package:mentorax/features/study_plans/data/models/study_plan_model.dart';
 
 class SyncBootstrapModel {
   final DateTime serverTimeUtc;
   final List<StudyPlanModel> studyPlans;
+  final List<MaterialModel> materials;
+  final List<MaterialChunkModel> materialChunks;
   final MobileDashboardModel dashboard;
   final NextSessionModel? nextSession;
 
   SyncBootstrapModel({
     required this.serverTimeUtc,
     required this.studyPlans,
+    required this.materials,
+    required this.materialChunks,
     required this.dashboard,
     required this.nextSession,
   });
@@ -20,6 +26,14 @@ class SyncBootstrapModel {
       serverTimeUtc: _parseUtcDateTime(json['serverTimeUtc'] as String),
       studyPlans: ((json['studyPlans'] as List?) ?? [])
           .map((item) => StudyPlanModel.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      materials: ((json['materials'] as List?) ?? [])
+          .map((item) => MaterialModel.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      materialChunks: ((json['materialChunks'] as List?) ?? [])
+          .map(
+            (item) => MaterialChunkModel.fromJson(item as Map<String, dynamic>),
+          )
           .toList(),
       dashboard: MobileDashboardModel.fromJson(
         json['dashboard'] as Map<String, dynamic>,

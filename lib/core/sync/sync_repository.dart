@@ -153,9 +153,27 @@ class SyncRepository {
       await _dashboardLocal?.cacheNextSession(nextSession);
     }
 
+    await _materialLocal?.cacheMaterials(bootstrap.materials);
+    await _cacheBootstrapChunks(bootstrap.materialChunks);
     await _studyPlanLocal?.cachePlans(bootstrap.studyPlans);
 
     return bootstrap;
+  }
+
+  Future<void> _cacheBootstrapChunks(List<MaterialChunkModel> chunks) async {
+    final materialLocal = _materialLocal;
+    if (materialLocal == null || chunks.isEmpty) return;
+
+    final chunksByMaterial = <String, List<MaterialChunkModel>>{};
+    for (final chunk in chunks) {
+      chunksByMaterial
+          .putIfAbsent(chunk.learningMaterialId, () => <MaterialChunkModel>[])
+          .add(chunk);
+    }
+
+    for (final entry in chunksByMaterial.entries) {
+      await materialLocal.cacheChunks(entry.key, entry.value);
+    }
   }
 
   Future<void> _applyChanges(SyncChangesModel changes) async {

@@ -196,16 +196,23 @@ void main() {
       service: service,
       studyPlanLocal: StudyPlanLocalDataSource(database),
       dashboardLocal: dashboardLocal,
+      materialLocal: MaterialLocalDataSource(database),
     );
 
     final result = await repository.synchronize();
 
+    final materials = await database.select(database.localMaterials).get();
+    final chunks = await database.select(database.localMaterialChunks).get();
     final plans = await database.select(database.localStudyPlans).get();
     final items = await database.select(database.localStudyPlanItems).get();
     final sessions = await database.select(database.localStudySessions).get();
 
     expect(result.attemptedCount, 0);
     expect(service.bootstrapCalled, isTrue);
+    expect(materials, hasLength(1));
+    expect(materials.single.title, 'Bootstrap Material');
+    expect(chunks, hasLength(1));
+    expect(chunks.single.title, 'Bootstrap Chunk');
     expect(plans, hasLength(1));
     expect(plans.single.title, 'Server Plan');
     expect(items, hasLength(1));
@@ -489,11 +496,11 @@ SyncChangesModel _expandedChanges() {
   });
 }
 
-Map<String, dynamic> _materialJson() {
+Map<String, dynamic> _materialJson({String title = 'Delta Material'}) {
   return {
     'id': 'material-1',
     'userId': 'user-1',
-    'title': 'Delta Material',
+    'title': title,
     'materialType': 'Text',
     'content': 'Delta material content',
     'estimatedDurationMinutes': 45,
@@ -505,12 +512,12 @@ Map<String, dynamic> _materialJson() {
   };
 }
 
-Map<String, dynamic> _chunkJson() {
+Map<String, dynamic> _chunkJson({String title = 'Delta Chunk'}) {
   return {
     'id': 'chunk-1',
     'learningMaterialId': 'material-1',
     'orderNo': 1,
-    'title': 'Delta Chunk',
+    'title': title,
     'content': 'Delta chunk content',
     'summary': 'Chunk summary',
     'keywords': 'delta',
@@ -595,6 +602,8 @@ SyncBootstrapModel _bootstrap({String planTitle = 'Server Plan'}) {
   return SyncBootstrapModel.fromJson({
     'serverTimeUtc': '2026-05-01T10:00:00Z',
     'studyPlans': [_planJson(title: planTitle)],
+    'materials': [_materialJson(title: 'Bootstrap Material')],
+    'materialChunks': [_chunkJson(title: 'Bootstrap Chunk')],
     'dashboard': {
       'dueCount': 1,
       'todayPlannedMinutes': 25,
